@@ -1,9 +1,8 @@
 C-----------------------------------------------------------------------C
 C     ABAQUS VUMAT USER SUBROUTINE: catalanotti_criteria.for            C
-C	  Author(s): Rutger Kok, Francisca Martinez-Hegueta                 C
-C     Date: 04/03/2019                                           	    C
+C	  Author(s): Rutger Kok, Francisca Martinez-Hergueta                 C
+C     Date: 24/06/2019                                           	    C
 C     Version 1.0                                                       C
-C     Release 1                                                         C
 C-----------------------------------------------------------------------C
 
 C
@@ -45,7 +44,8 @@ C
       real*8 G1plus,G1minus,G2plus,G2minus,G6
       real*8 A1plus,A1minus,A2plus,A2minus,A6
       real*8 alpha0,etaT,etaL,phic,ST,theta,omegaValue
-      real*8 phiLT,phiKMC, phiKMT, phiK,phiMT,phiMC
+      real*8 phiLT,phiLC_MC, phiLC_MT, phiLC,phiMT,phiMC
+      real*8 phiMC2,phiMC3, phiMT2, phiMT3, UNUSED 
       real*8 initialcharLength,thickness,traceStrain,meanDamage,expo, A
       real*8 trialStressP(6), trialStressT(6), phi, X, NEWT
       real*8 FUNC, DFUNC
@@ -94,7 +94,8 @@ C Initial values
       phic=ATan((1.0d0-Sqrt(1.0d0-4.0d0*dummy*(dummy+etaL)))         !Eq.12
      +/(2.0d0*(dummy+etaL)))
 
-      ST=YC*cos(alpha0)*(sin(alpha0)+cos(alpha0)/tan(2.0d0*alpha0))
+      ST = (0.5*(((2*sin(alpha0)**2.0)-1.0)*Sl_is)/    !Eq 12 Catalanotti (CLN)
+     +   (((1-sin(alpha0)**2.0)**0.5)*sin(alpha0)*etaL))
       etaT=-1.0d0/tan(2.0d0*alpha0)                      !Eq.17
 
       omegaValue=-0.120382            !Eq.20
@@ -119,7 +120,6 @@ C Stiffness matrix orthotropic material
       d66=2.0*xmu13   
 
 C Loop through the gauss points
-
 
       if(stepTime.eq.0) then     
 
@@ -199,18 +199,16 @@ c determine fracture plane angle theta (for fiber kinking)
       
       IF ((trialStress(4).eq.0).AND.(trialStress(6).eq.0)) THEN
         theta = 0.5d0*ATAN((2.0d0*trialStress(5))
-     */(trialStress(2)-trialStress(3))) ! eq. 55
+     *          /(trialStress(2)-trialStress(3))) ! Eq. 55 CLN
       ELSE
-        theta = ATAN(trialStress(6)/trialStress(4)) ! eq. 56
+        theta = ATAN(trialStress(6)/trialStress(4)) ! Eq. 56 CLN
       END IF
 
 c determine the misalignment angle phi
-      X = (sin(2.0d0*phic)*XC)/(2.0d0*phic) ! eq. 86
+      X = (sin(2.0d0*phic)*XC)/(2.0d0*phic) ! Eq. 86 CLN
 
       IF (trialStress(4).gt.0) THEN
-        phi = NEWT(0.1, trialStress, X) ! specified initial value of 0.1 for now
-      ELSE IF (trialStress(4).eq.0) THEN
-        phi = 0
+        phi = NEWT(0.1, trialStress, X) ! specified initial value of 0.1
       ELSE 
         phi = -1.0d0*NEWT(0.1, trialStress, X)
       END IF
@@ -218,55 +216,79 @@ c determine the misalignment angle phi
 c Rotate stresses by angle theta
       trialStressT(1) = trialStress(1)
       trialStressT(4) = trialStress(4)*cos(theta) 
-     *+ trialStress(6)*sin(theta)
+     *                  + trialStress(6)*sin(theta)
       trialStressT(6) = trialStress(6)*cos(theta) 
-     *- trialStress(4)*sin(theta)
+     *                  - trialStress(4)*sin(theta)
       trialStressT(2) = trialStress(2)*cos(theta)**2 
-     *+ 2.0d0*trialStress(5)*cos(theta)*sin(theta) 
-     *+ trialStress(3)*sin(theta)**2
+     *                  + 2.0d0*trialStress(5)*cos(theta)*sin(theta) 
+     *                  + trialStress(3)*sin(theta)**2
       trialStressT(5) = trialStress(5)*(cos(theta)**2 - sin(theta)**2)
-     *- trialStress(2)*sin(theta)*cos(theta) 
-     *+ trialStress(3)*sin(theta)*cos(theta)
+     *                  - trialStress(2)*sin(theta)*cos(theta) 
+     *                  + trialStress(3)*sin(theta)*cos(theta)
       trialStressT(3) = trialStress(3)*cos(theta)**2 
-     *- 2.0d0*trialStress(5)*cos(theta)*sin(theta) 
-     *+ trialStress(2)*sin(theta)**2
+     *                  - 2.0d0*trialStress(5)*cos(theta)*sin(theta) 
+     *                  + trialStress(2)*sin(theta)**2
 
 c NOTE: phi is also defined as a local variable in the Softening
 c parameter subroutine but this is not called in the main program
 c Rotate stresses by angle phi
       trialStressP(1) = trialStressT(1)*cos(phi)**2 
-     *+ 2.0d0*trialStressT(4)*cos(phi)*sin(phi) 
-     *+ trialStressT(2)*sin(phi)**2
+     *                  + 2.0d0*trialStressT(4)*cos(phi)*sin(phi) 
+     *                  + trialStressT(2)*sin(phi)**2
       trialStressP(4) = trialStressT(4)*(cos(phi)**2 -sin(phi)**2) 
-     *+ trialStressT(2)*sin(phi)*cos(phi) 
-     *- trialStressT(1)*sin(phi)*cos(phi)
+     *                  + trialStressT(2)*sin(phi)*cos(phi) 
+     *                  - trialStressT(1)*sin(phi)*cos(phi)
       trialStressP(6) = trialStressT(6)*cos(phi) 
-     *+ trialStressT(5)*sin(phi)
+     *                  + trialStressT(5)*sin(phi)
       trialStressP(2) = trialStressT(2)*cos(phi)**2 
-     *- 2.0d0*trialStressT(4)*sin(phi)*cos(phi) 
-     *+ trialStressT(1)*sin(phi)**2 
+     *                  - 2.0d0*trialStressT(4)*sin(phi)*cos(phi) 
+     *                  + trialStressT(1)*sin(phi)**2 
       trialStressP(5) = trialStressT(5)*cos(phi) 
-     *- trialStressT(6)*sin(phi)
+     *                  - trialStressT(6)*sin(phi)
       trialStressP(3) = trialStressT(3)
 
 c call subroutine to determine longitudinal compressive failure criteria
-      call FAIL(trialStressP,ST,YT,SL,etaL,etaT, phiMC, phiMT)
+      IF (trialStress(1).gt.0.d0) THEN
+        phiLT = trialStrain(1)/(XT/e11) ! Eq. 54 CLN
+      ELSEIF (trialStress(1).lt.0.d0) THEN
+        call FAIL(trialStressP,ST,YT,SL,etaL,etaT, phiMC, phiMT)
+        phiLC_MC = phiMC
+        phiLC_MT = phiMC
+        phiLC = max(phiLC_MC, phiLC_MT)
+      ENDIF
+    
+C call subroutine to determine transverse compressive and tensile 
+C failure criteria
+C in the 2-direction
+      IF (trialStress(2).ge.0.d0) THEN
+        call FAIL(trialStress,ST,YT,SL,etaL,etaT, phiMC, phiMT)
+        UNUSED = phiMC
+        phiMT2 = phiMC
+      ELSEIF (trialStress(2).lt.0.d0) THEN
+        call FAIL(trialStress,ST,YT,SL,etaL,etaT, phiMC, phiMT)
+        phiMC2 = phiMC
+        UNUSED = phiMC
+      ENDIF 
 
-      phiKMC = phiMC
-      phiKMT = phiMC
-      phiK = max(phiKMC, phiKMT)
+C in the 3-direction
+      IF (trialStress(3).gt.0.d0) THEN
+        call FAIL(trialStress,ST,YT,SL,etaL,etaT, phiMC, phiMT)
+        UNUSED = phiMC
+        phiMT3 = phiMC
+      ELSEIF (trialStress(3).lt.0.d0) THEN
+        call FAIL(trialStress,ST,YT,SL,etaL,etaT, phiMC, phiMT)
+        phiMC3 = phiMC
+        UNUSED = phiMC
+      ENDIF
 
-c call subroutine to determine transverse compressive and tensile 
-c failure criteria
-      call FAIL(trialStressP,ST,YT,SL,etaL,etaT, phiMC, phiMT)
-
-c longitudinal tensile failure critetion
-      phiLT = trialStrain(1)/(XT/e11) ! eq. 54
+C transverse failure criteria is the max of both 2 and 3 direction
+      phiMT = max(phiMT2,phiMT3)
+      phiMC = max(phiMC2, phiMC3) 
 
 C Update of the damage thresholds
 
        rNew1=max(1.0,max(phiLT,rOld1),max(phiK,rOld2))    !Eq.26
-       rNew2=max(1.0,max(phiK,rOld2))
+       rNew2=max(1.0,max(phiLC,rOld2))
        rNew3=max(1.0,max(phiMT,rOld3),max(phiMC,rOld4))
        rNew4=max(1.0,max(phiMC,rOld4))
        rNew5=1.0d0
@@ -422,66 +444,6 @@ c	end if !at the beginning
         return
         end
 
-! Determination of the softening parameter A  (exponential)      
-
-      subroutine SofteningParam(lch,X,E,G,cte,trialStrain,k,A)     !It will only be used when phi=1.0d0
-        real*8 E,X,cte,lch,G,trialStrain
-        real*8 Strain(1000), dam(1000), stress(1000),phi(1000)
-        real*8 Lim, interval, Error
-        real*8 G2, G1, GArea
-        real*8 A
-        integer i, j, length_integral, n, k
-
-           Lim = 100.0*trialStrain
-           length_integral = 1000
-           interval = (Lim-trialStrain)/length_integral
-           G1 = 0.5*abs(trialStrain)*X*lch
-           if (G1.gt.G)then
-                   G=1.5*G1
-             WRITE(*,*) 'Real energy, G in element', G, k
-           endif
-           A = 0.01+(2*lch*X*X/((2*E*G)-(lch*X*X)))
-           
-           do i = 1,length_integral
-              Strain(i) = trialStrain +i*interval
-              phi(i) = dsqrt((E*Strain(i)/X)**2.0d0+cte)
-           enddo
-
-           Error = 1.0d0 
-           n = 0
-
-666        if (Error.gt.0.01)then
-              A = A - 0.001
-              G2 = 0.0d0
-              do j = 1,length_integral
-                 dam(j) = 1.0d0-((1.0d0/phi(j))*dexp(A*(1.0d0-phi(j))))
-                 stress(j) = Strain(j)*E*(1.0d0-dam(j))
-                 G2 = G2 + stress(j)* interval
-              enddo
-              GArea = (G2 *lch) + G1
-              Error = G-GArea
-              Error = abs(Error)
-              n = n +1
-              if (n.gt.9999)then
-                      A = (2*lch*X*X/((2*E*G)-(lch*X*X)))
-                      goto 777
-              endif
-              if (A.lt.0.0d0)then
-                      A = (2*lch*X*X/((2*E*G)-(lch*X*X)))
-          WRITE(*,*) 'Negative A' 
-                      goto 777
-              endif
-           else
-                   goto 777
-           endif   
-
-           goto 666
-
-777        continue           
-
-        return
-
-       end
 
 C Damage varable, triangular damage dissipation       
        subroutine Damage(X,E,G,trialStrain,lch,dNew)
@@ -489,8 +451,8 @@ C Damage varable, triangular damage dissipation
         real*8 delta_0, delta_c
            delta_0 = X/E
            delta_c = (2.0d0*G/X*lch)
-           if (delta_c.lt.delta_0)then               !!Needed for d.nq.0-0
-                   delta_c = 1.1*delta_0             !! 1.1 adjustable for stability
+           if (delta_c.lt.delta_0)then       !!Needed for d.nq.0-0
+                   delta_c = 1.1*delta_0     !! 1.1 adjustable for stability
            endif
            dNew = (delta_c*(abs(trialStrain)-delta_0))
      *            /(abs(trialStrain)*(delta_c-delta_0))
@@ -522,26 +484,27 @@ c output variables
         phiMT = 0.0d0
 
         DO p = 1, 31 ! iterate over angles
-            tN = trialStress(2)*cos(a(p))**2 + 2.0d0*trialStress(5)
-     *          *sin(a(p))*cos(a(p)) + trialStress(3)*sin(a(p))**2
-            tT = -1.0d0*trialStress(2)*cos(a(p))*sin(a(p)) 
-     *          + trialStress(3)*sin(a(p))*cos(a(p)) - trialStress(5)
-     *          *(cos(a(p))**2 - sin(a(p))**2)
-            tL = trialStress(4)*cos(a(p)) + trialStress(6)*sin(a(p))
+            ! Eq 3 CLN (expanded in 59-61)
+            tN = trialStress(2)*cos(b(p))**2 + 2.0d0*trialStress(5)
+     *          *sin(b(p))*cos(b(p)) + trialStress(3)*sin(b(p))**2
+            tT = -1.0d0*trialStress(2)*cos(b(p))*sin(b(p)) 
+     *          + trialStress(3)*sin(b(p))*cos(b(p)) - trialStress(5)
+     *          *(cos(b(p))**2 - sin(b(p))**2)
+            tL = trialStress(4)*cos(b(p)) + trialStress(6)*sin(b(p))
       
-            kappa = (ST**2 - YT**2)/(ST*YT)
-            lambda = (2.0d0*etaL*ST)/(SL-kappa)
+            kappa = (ST**2 - YT**2)/(ST*YT)             ! Eq 43 CLN
+            lambda = (2.0d0*etaL*ST)/SL - kappa         ! Eq 45 CLN
       
-            trialphiMC = (tL/(SL-etaL*tN))**2 + (tT/(ST-etaT*tN))**2 ! eq. 5
+            trialphiMC = (tL/(SL-etaL*tN))**2 + (tT/(ST-etaT*tN))**2 ! Eq. 5 CLN
             trialphiMT = (tN/ST)**2 + (tL/SL)**2 + (tT/ST)**2 
-     *          + lambda*(tN/ST)*(tL/SL)**2 + kappa*(tN/ST) ! eq. 42
-            IF (trialphiMC.gt.phiMC) THEN ! update if criteria at a(p) is max 
+     *          + lambda*(tN/ST)*(tL/SL)**2 + kappa*(tN/ST) ! Eq. 42 CLN
+            IF (trialphiMC.gt.phiMC) THEN ! update if criteria at b(p) is max 
                 phiMC = trialphiMC
-                aFailC = a(p) ! record failure plane at max fail criteria
+                aFailC = b(p) ! record failure plane at max fail criteria
             END IF
             IF (trialphiMT.gt.phiMT) THEN
                 phiMT = trialphiMT
-                aFailT = a(p)
+                aFailT = b(p)
             END IF
         END DO
        RETURN
@@ -569,16 +532,18 @@ c Raphson method (uses functions FUNC and DFUNC as inputs)
 c Definition of function used in the Newton Raphson iteration method
       FUNCTION FUNC(gammaOld, trialStress, X)
       REAL*8 FUNC, X, gammaOld, trialStress(6)
+      ! Eq. 88 CLN
       FUNC = X*gammaOld + 0.5d0*(trialStress(1) - trialStress(2))
-     **sin(2.0d0*gammaOld) - abs(trialStress(4))*cos(2.0d0*gammaOld) ! eq. 88
+     *      *sin(2.0d0*gammaOld) - abs(trialStress(4))*cos(2.0d0*gammaOld) 
       RETURN
       END
   
 c Definiton of the derivative function of FUNC
       FUNCTION DFUNC(gammaOld, trialStress, X)
       REAL DFUNC, X, gammaOld, trialStress(6)
+      ! Eq. 89 CLN
       DFUNC = X + (trialStress(1) - trialStress(2))*cos(2.0d0*gammaOld)
-     *+ 2.0d0*abs(trialStress(4))*sin(2.0d0*gammaOld) ! eq. 89
+     *      + 2.0d0*abs(trialStress(4))*sin(2.0d0*gammaOld) 
       RETURN
       END
   
