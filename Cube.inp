@@ -1,0 +1,89 @@
+*Node,nset=all
+1,0,0,0
+2,1.0,0,0
+3,1.0,1.0,0
+4,0,1.0,0
+5,0,0,1.0
+6,1.0,0,1.0
+7,1.0,1.0,1.0
+8,0,1.0,1.0
+*Element, type=C3D8R, elset=elemento
+1,1,2,3,4,5,6,7,8
+*Solid Section, elset=elemento, orientation=localAxes, material=ORTHO
+1.,
+*Orientation, name=localAxes
+1.,0.,0.,0.,1.,0.
+3,0.
+************************
+*Material, name=ORTHO
+*Density
+ 1.5e-06,
+*****
+*Depvar, delete=20  
+     24,
+7,R1P,"Damage threshold R1P"
+8,R1M,"Damage threshold R1P"
+9,R2P,"Damage threshold R1P"
+10,R2M,"Damage threshold R1P"
+11,UNUSED1,"Not used"
+12,UNUSED2,"Not used"
+13,D1,"Damage variable D1"
+14,D2,"Damage variable D2"
+15,UNUSED3,"Not used"
+16,D6,"Damage variable D6"
+17,G,"Free Energy"
+18,ElasEng,"Elastic Energy"
+19,DMEAN,"Mean damage DMEAN"
+20,FDEACT,"Deactivation flag FDEACT"
+
+*User Material, constants=20
+**    E1       E22       E33      nu12       nu13      nu23       G12       G13
+    161.,    11.4,     11.4,     0.32,      0.32,     0.436,    5.290,     5.290
+**   G23       XT         XC        YT        YC        SL      alpha0      G1+
+    3.98,    2.3235,   1.2001,    0.1602,    0.198,    0.1302,    53.0,      0.1
+**   G1-       G2+       G2-        G6
+    0.1,    0.00075,   0.0025,   0.0035
+**
+*nset,nset=up
+2
+3
+6
+7
+*nset,nset=down
+1
+4
+5
+8
+** ----------------------------------------------------------------
+** 
+** STEP: Step-1
+** 
+*Step, name=Step-1
+***Dynamic, Explicit
+** 100.
+*Dynamic, Explicit
+, 30.
+*Bulk Viscosity
+0.06, 1.2
+** 
+** BOUNDARY CONDITIONS
+***Boundary
+**down,encastre
+*Boundary
+down, 1, 1
+*boundary,type=velocity
+up,1,1,1.0e-2
+*Restart, write, number interval=1, time marks=NO
+** 
+** FIELD OUTPUT: F-Output-1
+** 
+*Output, field, variable=PRESELECT,number intervals=50
+*Element Output, elset=elemento, directions=YES
+SDV, STATUS
+** 
+** HISTORY OUTPUT: H-Output-1
+** 
+*Output, history, variable=PRESELECT
+*End Step
+** ----------------------------------------------------------------
+** 
