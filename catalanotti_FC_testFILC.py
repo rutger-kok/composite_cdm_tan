@@ -24,19 +24,18 @@ St_is = (0.5*(((2*sin(alpha0)**2.0)-1.0)*Sl_is)/
         (((1-sin(alpha0)**2.0)**0.5)*sin(alpha0)*etaL))  # eq 12
 phic = (atan((1.0-(1.0-4.0*(Sl_is/Xc)*((Sl_is/Xc)+etaL))**0.5)/
         (2.0*((Sl_is/Xc)+etaL))))  # eq 72
+print phic
 etaT = (etaL*St_is)/Sl_is  # eq 10
 kappa = (St_is**2.0-Yt_is**2.0)/(St_is*Yt_is)  # eq 43
 lmbda = ((2.0*etaL*St_is)/Sl_is)-kappa  # eq 45 
 
 # IIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIII
 
-fille = open(r'C:\Workspace\FI.txt','w') 
-
 # Function to determine  f ailure in transverse tension and compression
 # and (with rotated coord system) in longitudinal compression 
 def fail(tStress,St_is,Yt_is,Sl_is,etaL,etaT):
     # array of angles 0 to pi/2
-    angleList = [k*(pi/60) for k in range(0,31)] 
+    angleList = [k*(pi/200) for k in range(0,101)] 
     phiM = 0
     for angle in angleList:
         # tractions: eq 3. see also eqs 59-61
@@ -128,88 +127,60 @@ def rotateStresses(tStress, tht, p):
 
 # to plot envelope choose two stresses. stress1 is plotted on x-axis, stress2
 # is plotted on the y-axis. e.g. currently sigma_11 plotted against tau_12
+phiLCList = []
+n = 500
+stressList = np.linspace(-1200.1,2323.5, n)
+for stress in stressList:
+    # define loading
+    trialStress = np.array([stress, 0.0, 0.0, 0.0, 0.0, 0.0])
 
-envelope = {0:[],1:[],2:[],3:[],4:[],5:[]}
-n = 250  # number of points along axes
-for stress1 in np.linspace(-1200.1, 2323.5, n):
-    for stress2 in np.linspace(0,160.2, n):
-        # define loading
-        trialStress = np.array([stress1, stress2, 0.0, 0.0, 0.0, 0.0])
-
-        # ----------------------------------------------------------------
-        # determine fracture plane angle theta (for fiber kinking)   
-        if trialStress[3] == 0 and trialStress[5] == 0:
-            if (trialStress[1]-trialStress[2]) == 0:
-                theta = pi/4.0
-            else:
-                # eq 55
-                theta = 0.5*atan(
-                    (2.0*trialStress[4])/(trialStress[1]-trialStress[2]))
-        else: 
-            if trialStress[3] == 0:
-                theta = pi/2.0
-            else:
-                # eq 56
-                theta = atan(trialStress[5]/trialStress[3])
-
-        # ----------------------------------------------------------------
-        # misalignment angle phi using the newton-raphson method
-        X = (sin(2.0*phic)*Xc)/(2.0*phic) # eq. 86 
-        gammaM = newtonRaphson(0.1, trialStress, X)  # initial guess = 0.1
-        if trialStress[3] >= 0:  # eq 77
-            phi = gammaM
+    # ----------------------------------------------------------------
+    # determine fracture plane angle theta (for fiber kinking)   
+    if trialStress[3] == 0 and trialStress[5] == 0:
+        if (trialStress[1]-trialStress[2]) == 0:
+            theta = pi/4.0
         else:
-            phi = -1.0*(gammaM)
+            # eq 55
+            theta = 0.5*atan(
+                (2.0*trialStress[4])/(trialStress[1]-trialStress[2]))
+    else: 
+        if trialStress[3] == 0:
+            theta = pi/2.0
+        else:
+            # eq 56
+            theta = atan(trialStress[5]/trialStress[3])
 
-        # ----------------------------------------------------------------
-        # determine failure indices
-        phiLT = 0
-        phiLC = 0
-        phiM = 0
+    # ----------------------------------------------------------------
+    # misalignment angle phi using the newton-raphson method
+    X = (sin(2.0*phic)*Xc)/(2.0*phic) # eq. 86 
+    gammaM = newtonRaphson(0.1, trialStress, X)  # initial guess = 0.1
+    if trialStress[3] >= 0:  # eq 77
+        phi = gammaM
+    else:
+        phi = -1.0*(gammaM)
 
-        # longitudinal failure
-        if trialStress[0] > 0.0:
-            # longitudinal tensile failure criterion
-            phiLT = trialStress[0]/Xt # eq. 54
-        elif trialStress[0] < 0.0:
-            trialStressRot, _ = rotateStresses(trialStress, theta, phi)
-            phiLC = fail(trialStressRot,St_is,Yt_is,Sl_is,etaL,etaT)
+    # ----------------------------------------------------------------
+    # determine failure indices
+    phiLT = 0
+    phiLC = 0
+    phiM = 0
 
-        # transverse failure
-        phiM = fail(trialStress,St_is,Yt_is,Sl_is,etaL,etaT)
+    # longitudinal failure
+    if trialStress[0] > 0.0:
+        # longitudinal tensile failure criterion
+        phiLT = trialStress[0]/Xt # eq. 54
+    elif trialStress[0] < 0.0:
+        trialStressRot, _ = rotateStresses(trialStress, theta, phi)
+        # print trialStressRot
+        phiLC = fail(trialStressRot,St_is,Yt_is,Sl_is,etaL,etaT)
 
-        # max failure index
-        failCriteriaList = (phiLT, phiLC, phiM)
-        maxFailCriteria = max(failCriteriaList)
-        maxFailIndex = failCriteriaList.index(maxFailCriteria)
+    # transverse failure
+    phiM = fail(trialStress,St_is,Yt_is,Sl_is,etaL,etaT)
 
-        
+    phiLCList.append(phiLC)
 
-        # if failure index approx. = 1 -> add to envelope line coords
-        if maxFailCriteria < 0.98: continue
-        elif maxFailCriteria >= 0.98 and maxFailCriteria < 1.02: 
-            envelope[maxFailIndex].append((stress1,stress2))
-            fille.write('{},{},{},{}\n'.format(trialStress[0],trialStress[1],theta,phi))
-            break
-        else: break
-
-# plot the failure envelope
-# (red = phiLT, blue = phiLC, green = phiM)
-colors = ['r','b','g']
-for idd in envelope.keys():
-    try:
-        x,y = zip(*envelope[idd])
-        plt.plot(x,y, color=colors[idd], label='me')
-    except ValueError:
-        continue
-
-filePath = r"C:\Users\s1342398\OneDrive - University of Edinburgh\Rutger Kok PhD\s11_s22_envelope(pos).csv"
-data = pd.read_csv(filePath, skiprows=[0])
-s11cln = np.array(data['X'])  # units: kN
-s22cln = np.array(data['Y'])  # units: kN
-plt.plot(s11cln,s22cln, label='catalanotti')
-plt.legend()
+plt.plot(stressList,phiLCList)
 plt.grid(True)
 plt.xlabel(r'$\sigma_{11}$')
-plt.ylabel(r'$\sigma_{22}$')
+plt.ylabel(r'FI_LC')
 plt.show()

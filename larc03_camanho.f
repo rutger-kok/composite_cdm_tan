@@ -32,46 +32,9 @@ C
       do i=1,nuvarm
        uvar(i) = 0.d0
       enddo
-C----------------------------------------------------------------------
-C Open and read input file with material properties:
-C directory/jobname.mt
-C----------------------------------------------------------------------
-      lxfname = 0
-      lxoutdir = 0
-      xfname =’ ’
-      xoutdir =’ ’
-C
-      call getjobname(xfname,lxfname) ! input file name
-      call getoutdir(xoutdir,lxoutdir) ! output directory
-C
-      if(lrdflg.ne.1) then
-       fnamex=dmkname(xfname(1:lxfname),xoutdir(1:lxoutdir),’.mt’)
-       open(unit=17,file=fnamex,status=’old’)
-       lrdflg = 1
-      endif
-C
-      read (17,*)
-      read (17,*) klarc
-C
-      CMNAME1=’**dummy_name**’
-      do while(CMNAME1.NE.CMNAME) ! search for material type
-       read (17,*)
-       read (17,*) CMNAME1
-       if(CMNAME1.EQ.CMNAME) then
-        read (17,*)
-        read (17,*) ym1, ym2, ym3, nu21, nu31, nu32
-        read (17,*)
-        read (17,*) g12, g23, g31, xt, xc, yt, yc, s12
-        read (17,*)
-        read (17,*) alphao, beta, g, slis
-       else
-        do i=1,6
-         read(17,*)
-        enddo
-       endif
-      enddo
-C
-      rewind 17
+
+C g12, g23, g31, xt, xc, yt, yc, s12, ym1, ym2, ym3, nu21, nu31, nu32
+c alphao, beta, g, slis
 C----------------------------------------------------------------------
 C Compute derived material properties
 C----------------------------------------------------------------------
@@ -100,14 +63,16 @@ C
      2      SL,SLIS,ST,G,G12,ETAL,ETAT,NDIM,UVAR,ANGLES,
      3      NOUT,NUVARM)
       endif
+
+      RETURN
+      END
+
 C----------------------------------------------------------------------
 *
 * End of main program
 *
 C----------------------------------------------------------------------
-      RETURN
-      END
-
+      
 * <<<<<<<<<<<<<<<<<<<<<<<< SUBROUTINE LARC03 >>>>>>>>>>>>>>>>>>>>>>>>> *
 * *
 * LaRC03 failure criteria *
@@ -274,44 +239,7 @@ C
 C
       RETURN
       END
-* <<<<<<<<<<<<<<<<<<<<<<<< FUNCTION DMKNAME >>>>>>>>>>>>>>>>>>>>>>>>> *
-* *
-* Compose a filename directory/jobname.exten *
-* *
-* <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>> *
-      character*(*) function dmkname(fname,dname,exten)
-C
-      character*(*) fname,dname,exten
-C C     fname I jobname C dname I directory C exten I
-Cextension C dmkname O directory/jobname.exten C
-      ltot = len(fname)
-      lf = 0
-      do k1 = ltot,2,-1
-       if (lf.eq.0.and.fname(k1:k1).ne.’ ’) lf = k1
-      end do
-C
-      ltot = len(dname)
-      ld = 0
-      do k1 = ltot,2,-1
-       if (ld.eq.0.and.dname(k1:k1).ne.’ ’) ld = k1
-      end do
-C
-      ltot = len(exten)
-      le = 0
-      do k1 = ltot,2,-1
-       if (le.eq.0.and.exten(k1:k1).ne.’ ’) le = k1
-      end do
-C
-      if ((lf + ld + le) .le. len(dmkname)) then
-       dmkname = dname(1:ld)//’/’//fname(1:lf)
-       ltot = ld + lf + 1
-       if ( le.gt.0) then
-        dmkname = dmkname(1:ltot)//exten(1:le)
-       end if
-      end if
-C
-      return
-      end
+
 C=======================================================================C
 C ==== end of program ====
 C=======================================================================C

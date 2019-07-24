@@ -4,10 +4,10 @@
       REAL*8 trialStress(6), phiC, XC, NEWT, FUNC, DFUNC
       REAL*8 trialStressP(6)
 
-      XC = 1200.1
+      XC = 1.2001
       phiC = 0.116264127346
-      trialStress(1) = 1000.0
-      trialStress(2) = 160.2
+      trialStress(1) = -1.2001
+      trialStress(2) = 0.0
       trialStress(3) = 0.0
       trialStress(4) = 0.0
       trialStress(5) = 0.0
