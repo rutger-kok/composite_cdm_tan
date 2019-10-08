@@ -32,35 +32,65 @@ C User subroutine VUMAT
       
 C Elastic constants orthotropic ply
 
-      e11 = 161.0
-      e22 = 11.4
-      e33 = 11.4
-      nu12 = 0.32
-      nu13 = 0.32
-      nu23 = 0.436
-      g12 = 5.29
-      g13 = 5.29
-      g23 = 3.98
+      e11 = 154.0
+      e22 = 8.5
+      e33 = 8.5
+      nu12 = 0.309053
+      nu13 = 0.309053
+      nu23 = 0.33
+      g12 = 4.2
+      g13 = 4.2
+      g23 = 3.2
 
 C Ply strength
 
-      XT = 2.3235
-      XC = 1.2001
-      YT = 0.1602
-      YC = 0.198
-      SL = 0.1302
+      XT = 2.61
+      XC = 1.759
+      YT = 0.055
+      YC = 0.285
+      SL = 0.105
 
 C Fracture Angle
 
-      alpha0 = 0.9250245036 !53 degrees
+      alpha0 = 53.0*0.017453292519943295 !converts to radians
 
-C Fracture toughness
+C Energies
 
-      G1plus = 0.1
-      G1minus = 0.1
-      G2plus = 0.00075
-      G2minus = 0.0025
-      G6 = 0.0035
+      G1Plus = 0.1 !G1c+
+      G1Minus = 0.1 !G1c-
+      G2Plus = 0.00075 !G2c+
+      G2Minus = 0.0025 !G2c-
+      G6 = 0.0035 !G6
+
+!       e11 = 161.0
+!       e22 = 11.4
+!       e33 = 11.4
+!       nu12 = 0.32
+!       nu13 = 0.32
+!       nu23 = 0.436
+!       g12 = 5.29
+!       g13 = 5.29
+!       g23 = 3.98
+
+! C Ply strength
+
+!       XT = 2.3235
+!       XC = 1.2001
+!       YT = 0.1602
+!       YC = 0.198
+!       SL = 0.1302
+
+! C Fracture Angle
+
+!       alpha0 = 0.9250245036 !53 degrees
+
+! C Fracture toughness
+
+!       G1plus = 0.1
+!       G1minus = 0.1
+!       G2plus = 0.00075
+!       G2minus = 0.0025
+!       G6 = 0.0035
 
 C Initial values
 
@@ -98,7 +128,7 @@ C Stiffness matrix orthotropic material
      1           ',','phi'
 
       DO k1 = 1, 1000
-          trialStress(1) = -1.250 + k1*0.0035236
+          trialStress(1) = -3.0 + k1*0.003
           trialStress(2) = 0.0
           trialStress(3) = 0.0
           trialStress(4) = 0.0
