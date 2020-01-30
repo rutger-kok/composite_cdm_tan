@@ -218,6 +218,7 @@ C Stiffness matrix orthotropic material
                 theta = atan(trialStress(6)/trialStress(4)) !Eq. 56 CLN
             ENDIF
         END IF
+        
         ! determine the misalignment angle phi
         X = (sin(2.0d0*phiC)*XC)/(2.0d0*phiC) ! Eq. 86 CLN
         gamma0 = 0.1
