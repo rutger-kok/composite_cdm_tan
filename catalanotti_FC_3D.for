@@ -1,7 +1,7 @@
 !----------------------------------------------------------------------!
-!     ABAQUS VUMAT USER SUBROUTINE: catalanotti_FC_3D.for              !
+!     ABAQUS VUMAT USER SUBROUTINE: catalanotti_FC_v3.for              !
 !     Author(s): Rutger Kok, Francisca Martinez-Hergueta               !
-!     Date: 30/01/2020                                                 !
+!     Date: 31/10/2019                                                 !
 !     Version 1.0                                                      !
 !----------------------------------------------------------------------!
 
@@ -40,11 +40,12 @@
       REAL*8 XT,XC,YT,YC,SL,alpha0,stressPower
       REAL*8 G1plus,G1minus,G2plus,G2minus,G6 ! fracture energies
       REAL*8, PARAMETER :: tol=1.0d-5 ! for Brent method convergence
-      INTEGER k,k1,i,j,f,myTmpVar,breakvar
+      INTEGER k,k1,i,j,f,myTmpVar
     !   OPEN(105,file='C:\Workspace\catalanotti_final\test.txt',status='unknown',
     !  1       action='readwrite',position='append')
 
       ! Elastic constants orthotropic ply
+
       e11 = props(1)
       e22 = props(2)
       e33 = props(3)
@@ -80,6 +81,10 @@
       nu21 = nu12*(e22/e11)
       nu31 = nu13*(e33/e11)
       nu32 = nu23*(e33/e22)
+      
+      !DO WHILE(myTmpVar.ne.999)
+        !myTmpVar = 1
+      !END DO 
 
       delta = 1.0d0/(e22**2.0d0*nu12**2.0d0 +
      1        2.0d0*e33*e22*nu12*nu13*nu23 +
@@ -96,22 +101,18 @@
       C(1,3) = -(e11*e22*e33*(nu13 + nu12*nu23))*delta
       C(2,3) = -(e22*e33*(e11*nu23 + e22*nu12*nu13))*delta
       C(3,3) = -(e22*e33*(-e22*nu12**2.0d0 + e11))*delta
-      C(4,4) = g12*delta
-      C(5,5) = g23*delta
-      C(6,6) = g13*delta
+      C(4,4) = g12
+      C(5,5) = g23
+      C(6,6) = g13
  
-      
+      ! Loop through the gauss points
       IF (stepTime.eq.0) THEN
-        ! Initial elastic step, for Abaqus tests      
-        
-        ! Initialisation of state variables
-        stateNew = 0.0d0
-        stressNew = 0.0d0
-        enerInternNew = 0.0d0 
-        enerInelasNew = 0.0d0
-
-        ! Loop through the gauss points
+        ! Initial elastic step, for Abaqus tests        
         DO k = 1, nblock
+          ! Initialisation of state variables
+          DO k1 = 1,nstatev
+              stateNew(k,k1) = 0.d0
+          ENDDO
 
           DO i = 1,6
               trialStrain(i)=strainInc(k,i)
@@ -129,7 +130,7 @@
 
         DO k = 1,nblock
           
-          DO i = 1,6
+            DO i = 1,6
               stateNew(k,i)=stateOld(k,i)+strainInc(k,i)
           ENDDO
 
@@ -215,7 +216,7 @@
         !Trial stress
         trialStress = matmul(C(1:6,1:6), trialStrain(1:6))
 
-            ! Evaluation of the damage activation functions
+        ! Evaluation of the damage activation functions
         FI_LT = 0.0d0
         FI_LC = 0.0d0
         FI_MT = 0.0d0
@@ -225,8 +226,8 @@
         IF (trialStress(1).gt.0.d0) THEN
             FI_LT = trialStrain(1)/(XT/e11) ! Eq. 54 CLN
         ELSEIF (trialStress(1).lt.0.d0) THEN
-            ! call rotate_stress(trialStress,phiC,XC,g12,trialStressP)
-            call fail_cln(trialStress,ST,SL,etaL,etaT,lambda,kappa,
+            call rotate_stress(trialStress,phiC,XC,g12,trialStressP)
+            call fail_cln(trialStressP,ST,SL,etaL,etaT,lambda,kappa,
      1                    FI_LT,FI_LC)
         ENDIF
 
@@ -355,10 +356,10 @@
         C(3,3) = -(e22*e33*(xOmega3 - 1.0d0)*(e11 - e22*nu12**2.0d0 +
      1           e22*xOmega1*nu12**2.0d0 + e22*xOmega2*nu12**2.0d0 - 
      2           e22*xOmega1*xOmega2*nu12**2.0d0))*delta
-        C(4,4) = -(g12*(xOmega4 - 1.0d0))*delta
-        C(5,5) = g23*delta
-        C(6,6) = g13*delta
-
+        C(4,4) = -(g12*(xOmega4 - 1.0d0))
+        C(5,5) = g23
+        C(6,6) = g13
+        
         trialStress = matmul(C(1:6,1:6), trialStrain(1:6))
 
         stateNew(k,7) = C(1,1)
