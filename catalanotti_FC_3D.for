@@ -358,7 +358,7 @@
      2           e22*xOmega1*xOmega2*nu12**2.0d0))*delta
         C(4,4) = -(g12*(xOmega4 - 1.0d0))
         C(5,5) = g23
-        C(6,6) = g13
+        C(6,6) = -(g13*(xOmega4 - 1.0d0))
         
         trialStress = matmul(C(1:6,1:6), trialStrain(1:6))
 
