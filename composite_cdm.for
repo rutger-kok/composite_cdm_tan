@@ -7,16 +7,31 @@
 
 ! This is a VUMAT subroutine implementing a continuum damage mechanics
 ! framework for composite materials in Abaqus. The subroutine is based
-! on the work of Catalanotti et al. (failure criteria) [1] and Maimi
-! et al. (CDM) [2]. 
+! on the work of Catalanotti et al. (failure criteria) [1], Maimi
+! et al. [2][3], and Camanho et al. [4]. 
 
-! [1] G. Catalanotti, P. P. Camanho, and A. T. Marques, Three-dimensional
-!     failure criteria for fiber-reinforced laminates, Composite
-!     Structures, vol. 95, pp. 63-79, 2013.
-! [2] P. Maimi, P. P. Camanho, J. A. Mayugo, and C. G. Davila,
-!     A continuum damage model for composite laminates: Part I -
-!     Constitutive model, Mechanics of Materials, vol. 39, no. 10,
-!     pp. 897-908, 2007.
+! [1] G. Catalanotti, P.P. Camanho, A.T. Marques
+! Three-dimensional failure criteria for fiber-reinforced laminates
+! Composite Structures 95 (2013) 63–79
+! http://dx.doi.org/10.1016/j.compstruct.2012.07.016
+
+! [2] P. Maimi, P.P. Camanho, J.A. Mayugo, C.G. Davila
+! A continuum damage model for composite laminates: Part I –
+! Constitutive model
+! Mechanics of Materials 39 (2007) 897–908
+! http://dx.doi.org/10.1016/j.mechmat.2007.03.005
+
+! [3] P. Maimi, P.P. Camanho, J.A. Mayugo, C.G. Davila
+! A continuum damage model for composite laminates: Part II –
+! Computational implementation and validation
+! Mechanics of Materials 39 (2007) 909–919
+! http://dx.doi.org/10.1016/j.mechmat.2007.03.006
+
+! [4] P.P. Camanho, M.A. Bessa, G. Catalanotti, M. Vogler, R. Rolfes
+! Modeling the inelastic deformation and fracture of polymer
+! composites – Part II: Smeared crack model
+! Mechanics of Materials 59 (2013) 36–49
+! http://dx.doi.org/10.1016/j.mechmat.2012.12.001
 
 ! ----------------------------------------------------------------------
 ! VARIABLE DICTIONARY (main program)
