@@ -203,7 +203,7 @@
           1.,           0.,           0.,           0.,           1.,           0.
 3, 0.
 ** Section: Section-1-ELEMENTO
-*Solid Section, elset=ELEMENTO, orientation=Ori-1, material=ORTHO
+*Solid Section, elset=ELEMENTO, orientation=Ori-1, material=VTC401
 1.,
 *End Part
 **  
@@ -237,7 +237,7 @@
 **      =====================
 ** 
 **      ***
-*Material, name=ORTHO
+*Material, name=VTC401
 *Density
  1.5e-06,
 *Depvar, delete=20
