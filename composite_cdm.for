@@ -1,7 +1,7 @@
 !----------------------------------------------------------------------!
 !     ABAQUS VUMAT USER SUBROUTINE: catalanotti_FC_3D.for              !
 !     Author(s): Rutger Kok, Francisca Martinez-Hergueta               !
-!     Last Updated: 18/01/2021                                         !
+!     Last Updated: 01/02/2021                                         !
 !     Version 1.0                                                      !
 !----------------------------------------------------------------------!
 
@@ -58,7 +58,7 @@
 !            increment
 ! enerInternNew = internal energy per unit mass at each material point
 !                 at the end of the increment.
-! ! = stiffness matrix (6x6)
+! C = stiffness matrix (6x6)
 ! k = material point index
 ! i = integer used for indexing arrays in a number of do loops
 ! strain = strain tensor in Voigt notation, see Abaqus documentation
@@ -101,8 +101,8 @@
       REAL*8, DIMENSION(6,6) :: C
       REAL*8 e11,e22,e33,nu12,nu13,nu23,g12,g13,g23 ! elastic constants
       REAL*8 nu21,nu31,nu32,delta
-      REAL*8 XT,XC,YT,YC,SL,alpha0,stressPower
       REAL*8 G1plus,G1minus,G2plus,G2minus,G6 ! fracture energies
+      REAL*8 XT,XC,YT,YC,SL,alpha0,stressPower
       INTEGER k,i
 
       ! Elastic constants orthotropic ply
@@ -122,9 +122,6 @@
       YT = props(12) ! tensile strength transverse direction
       YC = props(13) ! compressive strength transverse direction
       SL = props(14) ! shear strength
-
-      ! Fracture angle
-      alpha0 = props(15)*0.017453292519943295 ! converts to radians
 
       ! Fracture toughnesses
       G1plus = props(16) ! tensile frac. toughness fiber direction
@@ -216,8 +213,6 @@
 ! VARIABLE DICTIONARY (cdm subroutine)
 ! l_ch = characteristic element length, note: for a single element!
 ! trialStress = stress calculated using the undamaged stiffness tensor.
-! trialStressP = trialStress rotated into the misalignment coordinate
-!     frame to calculate the failure index for longitudinal compression.
 ! d1Plus,d1Minus,d2Plus,d2Minus,d3Plus,d3Minus = scalar damage
 !     variables quantifying damage in the fiber (1) and transverse
 !     (2,3) directions. Minus and Plus refer to tensile and
@@ -233,12 +228,6 @@
 ! FI_LC = longitudinal (fiber direction) compressive failure index
 ! FI_MT = longitudinal (transvere direction) tensile failure index
 ! FI_MC = longitudinal (transverse direction) compressive failure index
-! etaT = friction coefficient in the transverse direction
-! etaL = friction coefficient in the longitudinal direction
-! phiC = initial misalignment angle for compressive failure calculation
-! kappa = parameter used to calculate failure indices
-! lambda = parameter used to calculate failure indices
-! ST = in-situ (ideally) transverse shear strength
 ! minDamage = element deletion flag. If element is damaged in all
 !     directions the element is flagged for deletion.
 !----------------------------------------------------------------------!
@@ -261,7 +250,6 @@
         REAL*8 d1Plus,d1Minus,d2Plus,d2Minus,d3Plus,d3Minus
         REAL*8 d1,d2,d3,d6
         REAL*8 nu21,nu31,nu32,delta,minDamage
-        REAL*8 alpha0,etaT,etaL,phiC,kappa,lambda,ST
         REAL*8 FI_LT,FI_LC,FI_MT,FI_MC
         REAL*8 dState1,dState2,dState3,dState6
         REAL*8 dState1Old,dState2Old,dState3Old,dState6Old
@@ -270,16 +258,6 @@
         REAL*8, DIMENSION(nblock,nstatev), INTENT(INOUT) :: stateNew
         ! external functions
         REAL*8, EXTERNAL :: triangular, mccauley
-
-        ! Calculate parameters needed for failure criteria calculation
-        etaL = 0.280622004043348
-        phiC = atan((1.0d0-sqrt(1.0d0-4.0d0*(SL/XC)*((SL/XC)+etaL))) 
-     1         /(2.0d0*((SL/XC)+etaL)))  !Eq.12 Maimi
-        ST = (0.5*(((2*sin(alpha0)**2.0)-1.0)*SL)/  
-     1       (((1-sin(alpha0)**2.0)**0.5)*sin(alpha0)*etaL)) !Eq.12 CLN
-        etaT = (etaL*ST)/SL  !Eq.10 CLN
-        kappa = (ST**2.0d0-YT**2.0)/(ST*YT)  !Eq.43 CLN
-        lambda = ((2.0*etaL*ST)/SL)-kappa  !Eq.45 CLN 
 
         ! Load old dState values
         dState1Old = stateOld(k,13)
@@ -296,23 +274,26 @@
         FI_MT = 0.0d0
         FI_MC = 0.0d0
 
-        ! Calculate longitudinal failure indices
+        ! Calculate failure indices
         IF (trialStress(1).gt.0.d0) THEN
             ! If stress in fiber direction is positive calculate the
-            ! longitudinal failure index
-            FI_LT = strain(1)/(XT/e11) ! Eq. 54 CLN
+            ! longitudinal failure index in tension
+            FI_LT = trialStress(1)/XT ! max stress criterion
         ELSEIF (trialStress(1).lt.0.d0) THEN
-            ! If stress is negative first rotate stresses into
-            ! misalignment coordinate frame using rotate_stress function
-            call rotate_stress(trialStress,phiC,XC,g12,trialStressP)
-            ! Call fail_cln function with rotated stresses to determine
-            ! longitudinal compressive failure index
-            call fail_cln(trialStressP,ST,SL,etaL,etaT,lambda,kappa,
-     1                    FI_LT,FI_LC)
+            ! Else if stress in fiber direction is negative calculate the
+            ! longitudinal failure index in compression
+            FI_LC = trialStress(1)/XT
         ENDIF
-        ! Calculate transverse failure indices using fail_cln function
-        call fail_cln(trialStress,ST,SL,etaL,etaT,lambda,kappa,
-     1                FI_MT,FI_MC)
+
+        IF (trialStress(2).gt.0.d0) THEN
+            ! If stress in transverse direction is positive calculate the
+            ! transverse failure index in tension
+            FI_MT = trialStress(1)/YT ! max stress criterion
+        ELSEIF (trialStress(2).lt.0.d0) THEN
+            ! Else if stress in transverse direction is negative calculate the
+            ! transverse failure index in compression
+            FI_MC = trialStress(1)/YC
+        ENDIF
 
         ! Calculate scalar damage variables assuming triangular
         ! damage dissipation.
@@ -467,109 +448,6 @@
       END SUBROUTINE cdm
 
 !----------------------------------------------------------------------!
-! Function rotate_stress: rotates stresses into misaligned             !
-! coordinates system                                                   !
-!----------------------------------------------------------------------!
-! VARIABLE DICTIONARY (rotate_stress function)
-! trialStress = stress calculated using the undamaged stiffness tensor.
-! trialStressP = trialStress rotated into the misalignment coordinate
-!     frame to calculate the failure index for longitudinal compression.
-! trialStressT = trialStress rotated by in-plane angle theta.
-! phiC = initial misalignment angle for compressive failure calculation
-! g12 = longitudinal compressive failure stress
-! phi = angle of kink band
-! theta = kinking plane angle
-! phi0 = initial misalignment angle (manufacturing defects etc.)
-! m = cosine of theta
-! n = sine of theta
-! u = cosine of phi
-! v = sine of phi
-! tS4EQ0 = boolean - checks if trialStress(4) = 0
-! tS6EQ0 = boolean - checks if trialStress(6) = 0
-! gammaM = shear stress induced misalignment angle
-! gammaMC = gammaM under axial compression loading
-! eps = tolerance for conditional statements
-!----------------------------------------------------------------------!
-
-      SUBROUTINE rotate_stress(trialStress,phiC,XC,g12,trialStressP)
-        IMPLICIT NONE
-        ! input variables
-        REAL*8, INTENT(IN) :: phiC,XC,g12
-        REAL*8, DIMENSION(6), INTENT(IN) :: trialStress
-        ! local variables
-        REAL*8, DIMENSION(6) :: trialStressT
-        REAL*8  m,n,u,v,gamma0,phi,theta
-        REAL*8  gammaMC, gammaM, phi0
-        REAL*8, PARAMETER :: eps=1.d-8
-        LOGICAL tS4EQ0, tS6EQ0
-        ! output variables
-        REAL*8, DIMENSION(6), INTENT(OUT) :: trialStressP
-
-        ! first determine kink plane angle theta
-        tS4EQ0 = (abs(trialStress(4)-0.d0).lt.eps)
-        tS6EQ0 = (abs(trialStress(6)-0.d0).lt.eps)
-        IF (tS4EQ0.AND.tS6EQ0) THEN
-            IF (abs(trialStress(2)-trialStress(3)).lt.eps) THEN
-                theta = atan(1.0d0) ! pi/4
-            ELSE
-                theta = 0.5d0*atan((2.0d0*trialStress(5))
-     1                  /(trialStress(2)-trialStress(3))) !Eq.55 CLN
-            ENDIF 
-        ELSE
-            IF (abs(trialStress(4)-0.d0).lt.eps) THEN
-                theta = 2.0d0*atan(1.0d0) ! pi/2
-            ELSE 
-                theta = atan(trialStress(6)/trialStress(4)) !Eq. 56 CLN
-            ENDIF
-        END IF
-
-        ! Rotate stresses by angle theta
-        m = cos(theta)
-        n = sin(theta)
-        trialStressT(1) = trialStress(1)
-        trialStressT(2) = trialStress(2)*m**2 
-     1                    + 2.0d0*trialStress(5)*m*n 
-     2                    + trialStress(3)*n**2
-        trialStressT(3) = trialStress(3)*m**2 
-     1                    - 2.0d0*trialStress(5)*m*n 
-     2                    + trialStress(2)*n**2
-        trialStressT(4) = trialStress(4)*m + trialStress(6)*n
-        trialStressT(5) = trialStress(5)*(m**2 - n**2)
-     1                    - trialStress(2)*n*m 
-     2                    + trialStress(3)*n*m
-        trialStressT(6) = trialStress(6)*m - trialStress(4)*n
-
-        ! Determine kink band angle phi
-        gammaMC = (sin(2*phiC)*XC)/(2*g12)  ! eq 74
-        phi0 = phiC - gammaMC  ! eq 75
-        gammaM = ((phi0*g12 + abs(trialStressT(4)))/
-     1           (g12+trialStressT(1)-trialStressT(2)) - phi0)  ! eq 81
-        IF (trialStress(4).ge.0.d0) THEN ! eq 77
-            phi = phi0 + gammaM
-        ELSE
-            phi = -1.0*(phi0+gammaM)
-        ENDIF
-
-        ! Rotate stresses by angle phi
-        u = cos(phi)
-        v = sin(phi)
-        trialStressP(1) = trialStressT(1)*u**2 
-     1                    + 2.0d0*trialStressT(4)*u*v 
-     2                    + trialStressT(2)*v**2
-        trialStressP(2) = trialStressT(2)*u**2 
-     1                    - 2.0d0*trialStressT(4)*v*u 
-     2                    + trialStressT(1)*v**2     
-        trialStressP(3) = trialStressT(3)      
-        trialStressP(4) = trialStressT(4)*(u**2 -v**2) 
-     1                    + trialStressT(2)*v*u 
-     2                    - trialStressT(1)*v*u
-        trialStressP(5) = trialStressT(5)*u - trialStressT(6)*v     
-        trialStressP(6) = trialStressT(6)*u + trialStressT(5)*v
-
-      RETURN
-      END SUBROUTINE rotate_stress
-
-!----------------------------------------------------------------------!
 ! Function triangular: implements triangular damage dissipation        !
 !                                                                      !
 !----------------------------------------------------------------------!
@@ -620,85 +498,5 @@ C----------------------------------------------------------------------C
         mccauley = (value+abs(value))/2.0d0
         RETURN
       END FUNCTION mccauley
-
-!----------------------------------------------------------------------!
-! Subroutine fail_cln: Catalanotti failure criteria                    !
-!                                                                      !
-!----------------------------------------------------------------------!
-! VARIABLE DICTIONARY (fail_cln subroutine)
-! trialStress = stress calculated using the undamaged stiffness tensor.
-! FI_MT = tensile failure index
-! FI_MC = compressive failure index
-! etaT = friction coefficient in the transverse direction
-! etaL = friction coefficient in the longitudinal direction
-! kappa = parameter used to calculate failure indices
-! lambda = parameter used to calculate failure indices
-! ST = in-situ (ideally) transverse shear strength
-! SL = in-situ (ideally) longitudinal shear strength
-! trialFI_MT = stores trial values of tensile failure index
-! trialFI_MC = stores trial values of compression failure index
-! aFail_MT = angle of failure plane in tension
-! aFail_MC = angle of failure plane in compression
-! pi = variable to store the value of pi
-! tN = traction normal to failure plane
-! tT = traction transverse to failure plane
-! tL = traction aligned with failure plane
-! aR = angle in radians
-! a = angle in degrees
-!----------------------------------------------------------------------!
-
-      SUBROUTINE fail_cln(trialStress,ST,SL,etaL,etaT,lambda,kappa,
-     1                    FI_MT,FI_MC)
-        IMPLICIT NONE
-        ! input variables
-        REAL*8, DIMENSION(6), INTENT(IN) :: trialStress
-        REAL*8, INTENT(IN) :: ST,SL,etaL,etaT,lambda,kappa
-        ! local variables
-        REAL*8 trialFI_MT,trialFI_MC,aFail_MC,aFail_MT,pi,tN,tT,tL,aR
-        INTEGER a
-        ! output variables
-        REAL*8, INTENT(OUT) :: FI_MT, FI_MC
-       
-        pi = 4*atan(1.0d0) ! determine value of pi
-       
-        FI_MT = 0.0d0 ! initialize failure indices
-        FI_MC = 0.0d0
-        a = 0.0d0
-        ! iterate over angles to determine angle which maximizes FIs
-        DO WHILE (a.le.180) ! iterate over angles from 0 to 180 degrees
-            aR= a*(pi/180.0d0)  ! angle in radians
-            ! Calculate tractions on failure plane: Eq 3 CLN (and 59-61)
-            tN = trialStress(2)*cos(aR)**2 + 2.0d0*trialStress(5)
-     1          *sin(aR)*cos(aR) + trialStress(3)*sin(aR)**2
-            tT = -1.0*cos(aR)*sin(aR)
-     1           *(trialStress(2)-trialStress(3))
-     2           +(trialStress(5)*(cos(aR)**2.0 - sin(aR)**2.0))
-            tL = trialStress(4)*cos(aR) + trialStress(6)*sin(aR)
-            
-            ! Calculate value of failure indices at current angle
-            IF (tN.ge.0.0d0) THEN
-                trialFI_MT = (tN/ST)**2 + (tL/SL)**2 + (tT/ST)**2 
-     1                       + lambda*(tN/ST)*(tL/SL)**2 
-     2                       + kappa*(tN/ST) ! Eq. 42 CLN
-                trialFI_MC = 0.0
-            ELSE
-                trialFI_MC = (tL/(SL-etaL*tN))**2 
-     1                      + (tT/(ST-etaT*tN))**2 ! Eq. 5 CLN
-                trialFI_MT = 0.0
-            ENDIF
-            ! Update max values if current value > max value
-            IF (trialFI_MT.gt.FI_MT) THEN
-                FI_MT = trialFI_MT
-                aFail_MT = aR ! record failure plane 
-            END IF
-            IF (trialFI_MC.gt.FI_MC) THEN
-                FI_MC = trialFI_MC
-                aFail_MC = aR ! record failure plane 
-            END IF
-            ! Update angle
-            a = a + 1
-        END DO
-      RETURN
-      END SUBROUTINE fail_cln
 
 
