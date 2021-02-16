@@ -1,113 +1,125 @@
-!----------------------------------------------------------------------!
-!     ABAQUS VUMAT USER subroutine: catalanotti_FC_3D.for              !
-!     Author(s): Rutger Kok, Francisca Martinez-Hergueta               !
-!     Last Updated: 18/01/2021                                         !
-!     Version 1.0                                                      !
-!----------------------------------------------------------------------!
-
 ! This is a VUMAT subroutine implementing a continuum damage mechanics
-! framework for composite materials in Abaqus. The subroutine is based
-! on the work of Catalanotti et al. (failure criteria) [1], Maimi
-! et al. [2][3], and Camanho et al. [4]. 
+! framework for composite materials in Abaqus.
+! Copyright (C) 2021 Rutger Wouter Kok
 
-! [1] G. Catalanotti, P.P. Camanho, A.T. Marques
-! Three-dimensional failure criteria for fiber-reinforced laminates
-! Composite Structures 95 (2013) 63–79
-! http://dx.doi.org/10.1016/j.compstruct.2012.07.016
+! This library is free software; you can redistribute it and/or
+! modify it under the terms of the GNU Lesser General Public
+! License as published by the Free Software Foundation; either
+! version 2.1 of the License, or (at your option) any later version.
 
-! [2] P. Maimi, P.P. Camanho, J.A. Mayugo, C.G. Davila
-! A continuum damage model for composite laminates: Part I –
-! Constitutive model
-! Mechanics of Materials 39 (2007) 897–908
-! http://dx.doi.org/10.1016/j.mechmat.2007.03.005
+! This library is distributed in the hope that it will be useful,
+! but WITHOUT ANY WARRANTY; without even the implied warranty of
+! MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+! Lesser General Public License for more details.
 
-! [3] P. Maimi, P.P. Camanho, J.A. Mayugo, C.G. Davila
-! A continuum damage model for composite laminates: Part II –
-! Computational implementation and validation
-! Mechanics of Materials 39 (2007) 909–919
-! http://dx.doi.org/10.1016/j.mechmat.2007.03.006
+! You should have received a copy of the GNU Lesser General Public
+! License along with this library; if not, write to the Free Software
+! Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA
+! 02110-1301 USA
 
-! [4] P.P. Camanho, M.A. Bessa, G. Catalanotti, M. Vogler, R. Rolfes
-! Modeling the inelastic deformation and fracture of polymer
-! composites – Part II: Smeared crack model
-! Mechanics of Materials 59 (2013) 36–49
-! http://dx.doi.org/10.1016/j.mechmat.2012.12.001
-
-! ----------------------------------------------------------------------
-! Variable Dictionary:
-! For a full rundown of each Abaqus variable see the Abaqus VUMAT
-! documentation. 
-! nblock = Number of material points to be processed in this call to
-!          VUMAT. In other words, the number of integration points,
-!          which depends on the element choice. C3D8R elements have 1
-!          integration point, so nblock=number of elements.
-! props = material property array
-! charLength = characteristic element length
-! stepTime = time since step began
-! nstatev = number of user-defined state variables that are associated
-!           with this material type, 24 in this case (not all state
-!           variable slots are used)
-! strainInc = strain increment tensor at each material point
-! stressOld = stress tensor at each material point at the beginning of
-!             the increment.
-! stateOld = state variables at each material point at the beginning
-!            of the increment.
-! stressNew = stress tensor at each material point at the end of the
-!             increment.
-! stateNew = state variables at each material point at the end of the
-!            increment
-! enerInternNew = internal energy per unit mass at each material point
-!                 at the end of the increment.
-! ! = stiffness matrix (6x6)
-! k = material point index
-! i = integer used for indexing arrays in a number of do loops
-! strain = strain tensor in Voigt notation, see Abaqus documentation
-!           for more info (strain is diff. in implicit and explicit)
-! stress = stress tensor in Voigt notation
-! stressPower = internal energy per unit mass
-!----------------------------------------------------------------------!
-
-! User subroutine VUMAT
       include 'transverse_damage.f'
       include 'damage_evolution.f'
       include 'failure_criteria.f'
 
-! User subroutine VUMAT
-      subroutine vumat (
-! Read only -
-     *     nblock, ndir, nshr, nstatev, nfieldv, nprops, lanneal,
-     *     stepTime, totalTime, dt, cmname, coordMp, charLength,
-     *     props, density, strainInc, relSpinInc,
-     *     tempOld, stretchOld, defgradOld, fieldOld,
-     *     stressOld, stateOld, enerInternOld, enerInelasOld,
-     *     tempNew, stretchNew, defgradNew, fieldNew,
-! Write only -
-     *     stressNew, stateNew, enerInternNew, enerInelasNew )
+      subroutine vumat(
+        ! Read only - input variables from Abaqus
+    1   nblock, ndir, nshr, nstatev, nfieldv, nprops, lanneal,
+    2   stepTime, totalTime, dt, cmname, coordMp, charLength,
+    3   props, density, strainInc, relSpinInc,
+    4   tempOld, stretchOld, defgradOld, fieldOld,
+    5   stressOld, stateOld, enerInternOld, enerInelasOld,
+    6   tempNew, stretchNew, defgradNew, fieldNew,
+        ! Write only - outputs Abaqus needs from subroutine
+    7   stressNew, stateNew, enerInternNew, enerInelasNew)
 
-      include 'vaba_param.inc'
+        include 'vaba_param.inc'
+        
+        ! Dimension the Abaqus input variables
+        dimension props(nprops), density(nblock), coordMp(nblock),
+    1     charLength(nblock), strainInc(nblock, ndir+nshr),
+    2     relSpinInc(nblock, nshr), tempOld(nblock),
+    3     stretchOld(nblock, ndir+nshr), fieldOld(nblock, nfieldv),
+    4     defgradOld(nblock,ndir+nshr+nshr), stateOld(nblock, nstatev),
+    5     stressOld(nblock, ndir+nshr), enerInternOld(nblock),
+    6     enerInelasOld(nblock), tempNew(nblock),
+    7     stretchNew(nblock, ndir+nshr), fieldNew(nblock, nfieldv),
+    8     defgradNew(nblock,ndir+nshr+nshr), enerInelasNew(nblock),
+    9     stressNew(nblock,ndir+nshr), stateNew(nblock, nstatev),
+    1     enerInternNew(nblock)     
+        character*80 cmname
 
-      dimension coordMp(nblock,*), charLength(nblock), props(nprops),
-     1     density(nblock), strainInc(nblock,ndir+nshr),
-     2     relSpinInc(nblock,nshr), tempOld(nblock),
-     3     stretchOld(nblock,ndir+nshr), 
-     4     defgradOld(nblock,ndir+nshr+nshr),
-     5     fieldOld(nblock,nfieldv), stressOld(nblock,ndir+nshr),
-     6     stateOld(nblock,nstatev), enerInternOld(nblock),
-     7     enerInelasOld(nblock), tempNew(nblock),
-     8     stretchNew(nblock,ndir+nshr),
-     9     defgradNew(nblock,ndir+nshr+nshr),
-     1     fieldNew(nblock,nfieldv),
-     2     stressNew(nblock,ndir+nshr), stateNew(nblock,nstatev),
-     3     enerInternNew(nblock), enerInelasNew(nblock)     
+        ! Purpose: This is a VUMAT subroutine implementing a CDM 
+        ! framework for composite materials in Abaqus. The subroutine
+        ! is based on the work of Catalanotti et al. [1] (for the
+        ! failure criteria), Maimi et al. [2][3], and Camanho et al.
+        ! [4] (damage evolution). 
+
+        ! [1] G. Catalanotti, P.P. Camanho, A.T. Marques
+        ! Three-dimensional failure criteria for fiber-reinforced
+        ! laminates
+        ! Composite Structures 95 (2013) 63–79
+        ! http://dx.doi.org/10.1016/j.compstruct.2012.07.016
+
+        ! [2] P. Maimi, P.P. Camanho, J.A. Mayugo, C.G. Davila
+        ! A continuum damage model for composite laminates: Part I –
+        ! Constitutive model
+        ! Mechanics of Materials 39 (2007) 897–908
+        ! http://dx.doi.org/10.1016/j.mechmat.2007.03.005
+
+        ! [3] P. Maimi, P.P. Camanho, J.A. Mayugo, C.G. Davila
+        ! A continuum damage model for composite laminates: Part II –
+        ! Computational implementation and validation
+        ! Mechanics of Materials 39 (2007) 909–919
+        ! http://dx.doi.org/10.1016/j.mechmat.2007.03.006
+
+        ! [4] P.P. Camanho, M.A. Bessa, G. Catalanotti, M. Vogler,
+        ! R. Rolfes
+        ! Modeling the inelastic deformation and fracture of polymer
+        ! composites – Part II: Smeared crack model
+        ! Mechanics of Materials 59 (2013) 36–49
+        ! http://dx.doi.org/10.1016/j.mechmat.2012.12.001
+
+        ! Variable dictionary:
+        ! For a full rundown of each Abaqus variable see the Abaqus
+        ! VUMAT documentation. 
+        ! nblock = Number of material points to be processed in this
+        !   call to VUMAT. In other words, the number of integration
+        !   points, which depends on the element choice. C3D8R elements
+        !   have 1 integration point, so nblock=number of elements.
+        ! props = material property array
+        ! charLength = characteristic element length array
+        ! stepTime = time since step began
+        ! nstatev = number of user-defined state variables that are
+        !   associated with this material type, 24 in this case
+        !   (not all state variable slots are used)
+        ! strainInc = strain increment tensor at each material point
+        ! stressOld = stress tensor at each material point at the
+        !   beginning of the increment
+        ! stateOld = state variables at each material point at the
+        !   beginning of the increment
+        ! stressNew = stress tensor at each material point at the end
+        !   of the increment.
+        ! stateNew = state variables at each material point at the end
+        !   of the increment
+        ! enerInternNew = internal energy per unit mass at each material
+        !   point at the end of the increment.
+        ! C = stiffness matrix (6x6)
+        ! k = material point index
+        ! i = integer used for indexing arrays in a number of do loops
+        ! strain = strain tensor in Voigt notation, see Abaqus
+        !   documentation for more info (strain is different in
+        !   implicit and explicit)
+        ! stress = stress tensor in Voigt notation
+        ! stressPower = internal energy per unit mass
 
         ! Declare variables used in main part of script
         real*8, dimension(6) :: stress,strain
         real*8, dimension(6,6) :: C
-        real*8 e11,e22,e33,nu12,nu13,nu23,g12,g13,g23 ! elastic const.
-        real*8 nu21,nu31,nu32,delta
-        real*8 XT,XC,YT,YC,SL,alpha0,stressPower
-        real*8 G1plus,G1minus,G2plus,G2minus,G6 ! fracture energies
-        integer k,i
+        real*8 :: e11,e22,e33,nu12,nu13,nu23,g12,g13,g23
+        real*8 :: nu21,nu31,nu32,delta
+        real*8 :: G1plus,G1minus,G2plus,G2minus,G6
+        real*8 :: XT,XC,YT,YC,SL,alpha0,stressPower
+        integer :: k,i
 
         ! Elastic constants orthotropic ply
         e11 = props(1) ! stiffness fiber direction

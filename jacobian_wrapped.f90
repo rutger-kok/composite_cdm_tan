@@ -20,8 +20,9 @@ A(1,2) = (ec_cr(4)*ec_cr(2)*lch**3.0d0*tbar_cr(1)*(sign(1.0d0,ec_cr(2)*lch) + &
          ec_cr(2)**2.0d0)**(1.0d0/2.0d0) - ec_cr(2)**2.0d0*tbar_cr(2)**2.0d0*(tbar_cr(1)**2.0d0 + tbar_cr(2)**2.0d0)**(1.0d0/ &
          2.0d0)*(4.0d0*ec_cr(4)**2.0d0 + ec_cr(2)**2.0d0)**(1.0d0/2.0d0) + 8.0d0*ec_cr(4)**2.0d0*ec_cr(2)*tbar_cr(2)**3.0d0 + &
          2.0d0*ec_cr(2)**3.0d0*tbar_cr(1)**2.0d0*tbar_cr(2) + 8.0d0*ec_cr(4)**2.0d0*ec_cr(2)*tbar_cr(1)**2.0d0*tbar_cr(2)))/ &
-         1.0d0,tbar_cr(1))*sign(1.0d0,tbar_cr(2))*sign(1.0d0,tbar_cr(3))*term1**2.0d0*(4.0d0*ec_cr(4)**2.0d0*tbar_cr(1)**2.0d0 + &
-         4.0d0*ec_cr(4)**2.0d0*tbar_cr(2)**2.0d0 + ec_cr(2)**2.0d0*tbar_cr(1)**2.0d0)**2.0d0)
+         (sign(1.0d0,tbar_cr(1))*sign(1.0d0,tbar_cr(2))*sign(1.0d0,tbar_cr(3))*term1**2.0d0* &
+         (4.0d0*ec_cr(4)**2.0d0*tbar_cr(1)**2.0d0 + 4.0d0*ec_cr(4)**2.0d0*tbar_cr(2)**2.0d0 + &
+         ec_cr(2)**2.0d0*tbar_cr(1)**2.0d0)**2.0d0)
 A(1,3) = (64.0d0*ec_cr(4)*ec_cr(5)*lch**3.0d0*tbar_cr(1))/(abs(ec_cr(2))**2.0d0*abs(lch)**2.0d0 + &
          16.0d0*ec_cr(4)**2.0d0*lch**2.0d0 + ec_cr(2)**2.0d0*lch**2.0d0 + 16.0d0*ec_cr(5)**2.0d0*lch**2.0d0 + &
          2.0d0*ec_cr(2)*lch*abs(ec_cr(2))*abs(lch))**1.5d0

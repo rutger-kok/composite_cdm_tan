@@ -7,7 +7,7 @@ module damage_evolution
 contains 
 
   subroutine cdm(k,nblock,nstatev,strain,stateOld,lch,C,e11,e22,e33,nu12,nu13,nu23,g12,g13,g23,XT,XC,YT,YC,SL, &
-                G1plus,G1minus,G2plus,G2minus,G6,alpha0,stress,stateNew)
+                 G1plus,G1minus,G2plus,G2minus,G6,alpha0,stress,stateNew)
     ! Purpose: Implements continuum damage mechanics framework from Maimi et al. (2007)
     ! Variable Dictionary:
     ! lch = characteristic element length, note: for a single element!
@@ -45,7 +45,7 @@ contains
     real*8, dimension(6,6), intent(inout) :: C
     real*8, dimension(6), intent(in) :: strain
     real*8, intent(in) :: e11,e22,e33,nu12,nu13,nu23,g12,g13,g23
-    real*8, intent(in) :: XT,XC,YT,YC,SL,lch
+    real*8, intent(in) :: XT,XC,YT,YC,SL,lch,alpha0
     real*8, intent(in) :: G1plus,G1minus,G2plus,G2minus,G6
     ! local variables
     real*8, dimension(6) :: trialStress, trialStressP, e0
@@ -53,7 +53,7 @@ contains
     real*8 d1Plus,d1Minus,d2Plus,d2Minus,d3Plus,d3Minus
     real*8 d1,d2,d3,d6
     real*8 nu21,nu31,nu32,delta,minDamage
-    real*8 alpha0,etaT,etaL,phiC,kappa,lambda,ST,a,tN,tT,tL,crack_initiation
+    real*8 etaT,etaL,phiC,kappa,lambda,ST,a,tN,tT,tL,crack_initiation
     real*8 FI_LT,FI_LC,FI_MT,FI_MC
     real*8 dState1,dState2,dState3,dState6
     real*8 dState1Old,dState2Old,dState3Old,dState6Old
@@ -282,7 +282,7 @@ contains
   pure function triangular(X,E,G,tStrain,lch) result(dam)
     ! Purpose: Implement triangular damage dissipation
     ! Variable dictionary:
-    ! X = failure stress (loading and material direction unspecified)
+    ! X = failure stress (material direction unspecified)
     ! E = modulus
     ! G = energy release rate (NOT shear modulus)
     ! tStrain = scalar trial strain value
