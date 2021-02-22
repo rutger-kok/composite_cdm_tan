@@ -116,7 +116,7 @@
         real*8 :: nu21,nu31,nu32,delta
         real*8 :: G1plus,G1minus,G2plus,G2minus,G6
         real*8 :: XT,XC,YT,YC,SL,alpha0,stressPower
-        integer :: k,i
+        integer :: k,i,debugLoop
 
         ! Elastic constants orthotropic ply
         e11 = props(1) ! stiffness fiber direction
@@ -189,6 +189,10 @@
             end do
           end do
         else
+          ! infinite loop for debugging with Visual Studio
+          !do while (debugLoop /= 999)
+            !debugLoop = 1
+          !end do
           ! If not initial step, calc. stresses according to CDM model
           do k = 1,nblock
             ! Calc. new strain and assign to state variable array (1-6)
@@ -398,24 +402,30 @@
           if (crack_initiation == 0.0d0) then
             stateNew(k,18) = 1.0d0
             do i = 7,12
-              stateNew(k,i) = strain(i)
+              j = i - 6
+              stateNew(k,i) = strain(j)
             end do
+            
             stateNew(k,15) = tL
             stateNew(k,16) = tN
             stateNew(k,17) = tT
+            
+            stress = matmul(C(1:6,1:6), strain(1:6))
+            
+          else ! dont call smeared_crack at crack initiation
+            
+            do i = 7,12
+              j = i - 6
+              e0(j) = stateOld(k,i)
+            end do
+
+            tbar_cr(1) = stateOld(k,15)
+            tbar_cr(2) = stateOld(k,16)
+            tbar_cr(3) = stateOld(k,17)
+
+            call smeared_crack(strain,e0,a,tbar_cr,C,G1Plus,G2Plus,lch,
+     1                         e22,stress,dState2)
           end if
-
-          do i = 7,12
-            j = i - 6
-            e0(j) = stateNew(k,i)
-          end do
-
-          tbar_cr(1) = stateNew(k,15)
-          tbar_cr(2) = stateNew(k,16)
-          tbar_cr(3) = stateNew(k,17)
-
-          call smeared_crack(strain,e0,a,tbar_cr,C,G1Plus,G2Plus,lch,
-     1                       e22,stress,dState2)
 
         else
 
@@ -589,7 +599,7 @@
       end function mccauley
 
       subroutine catalanotti(trialStress,ST,SL,etaL,etaT,lambda,kappa,
-     1                       FI_MT,FI_MC,a,tN,tT,tL)
+     1                       FI_MT,FI_MC,aFail,tN,tT,tL)
         ! Purpose: Implements transverse (and longitudinal compression)
         !   failure indices from Catalanotti et al. (2013)
         ! Variable Dictionary:
@@ -619,10 +629,10 @@
         real*8, dimension(6), intent(in) :: trialStress
         real*8, intent(in) :: ST,SL,etaL,etaT,lambda,kappa
         ! local variables
-        real*8 trialFI_MT,trialFI_MC,aFail_MC,aFail_MT,pi,tN,tT,tL,aR
-        integer a
+        real*8 :: trialFI_MT,trialFI_MC,pi,aR
+        integer :: a
         ! output variables
-        real*8, intent(out) :: FI_MT, FI_MC
+        real*8, intent(out) :: FI_MT,FI_MC,aFail,tN,tT,tL
     
         pi = 4.0d0*atan(1.0d0) ! determine value of pi
     
@@ -655,11 +665,11 @@
           ! Update max values if current value > max value
           if (trialFI_MT > FI_MT) then
             FI_MT = trialFI_MT
-            aFail_MT = aR ! record failure plane 
+            aFail = aR ! record failure plane 
           end if
           if (trialFI_MC > FI_MC) then
             FI_MC = trialFI_MC
-            aFail_MC = aR ! record failure plane 
+            aFail = aR ! record failure plane 
           end if
       
           ! Update angle
@@ -673,37 +683,40 @@
         ! input variables
         real*8, dimension(6,6), intent(in) :: C
         real*8, dimension(6), intent(in) :: eTotal, e0
-        real*8, dimension(3), intent(in) :: tbar_cr
+        real*16, dimension(3), intent(in) :: tbar_cr
         real*8, intent(in) :: alpha, GIc, GIIc, lch, E22
         ! local variables
+        real*16, dimension(6) :: ec_cr, eTotal_cr
+        real*16, dimension(3,3) :: M, Minv
         real*8, dimension(6,6) :: R_gc, R_cg
         real*8, dimension(3,6) :: H
-        real*8, dimension(6) :: ec_cr, eTotal_cr, ec_cr_new, ec, e0_cr
+        real*8, dimension(6) :: ec_cr_new, ec, e0_cr
         real*8, dimension(6) :: sc, sTotal, s
-        real*8, dimension(3,3) :: M, Minv, R, RT
+        real*8, dimension(3,3) ::  R, RT
         real*8, dimension(3) :: n1, n2, n3, w_cr, f, res, ec_cr_delta
         real*8, dimension(3) :: t_cr, t
-        real*8 :: A, B, diff, tol, beta, lambda, wmf, d, tbar_cr_norm
+        real*8 :: A, B, diff, tol, beta, lambda, wmf, tbar_cr_norm
         real*8 :: w_cr_s, tbar_cr_s, p, q, eta
         integer i
         ! output variables
-        real*8, dimension(6) :: stress
+        real*8, dimension(6), intent(inout) :: stress
+        real*8, intent(out) :: d
         ! external functions
         real*8, external :: mccauley, kdelta
         interface
           function matinv3(A) result (B)
-            real*8, intent(in) :: A(3,3)   ! Matrix
-            real*8             :: B(3,3)   ! Inverse matrix
+            real*16, intent(in) :: A(3,3)   ! Matrix
+            real*16             :: B(3,3)   ! Inverse matrix
           end function
         end interface
         interface
           function jacobian(C,ec_cr,tbar_cr,lch,alpha,eta,GIc,GIIc,
      1                       E22,eTotal_cr) result(A)
             real*8, dimension(6,6), intent(in) :: C
-            real*8, dimension(6), intent(in) :: ec_cr, eTotal_cr
-            real*8, dimension(3), intent(in) :: tbar_cr
+            real*16, dimension(6), intent(in) :: ec_cr, eTotal_cr
+            real*16, dimension(3), intent(in) :: tbar_cr
             real*8, intent(in) :: alpha, lch, eta, GIc, GIIc, E22
-            real*8, dimension(3,3) :: A
+            real*16, dimension(3,3) :: A
           end function
         end interface
         
@@ -714,6 +727,9 @@
           end function
         end interface
 
+        ! mixed mode interaction parameter
+        eta = 1.45d0
+        
         ! crack plane vectors (n2 is normal to crack plane)
         p = cos(alpha)
         q = sin(alpha)
@@ -721,9 +737,13 @@
         n2 = (/0.0d0, p, q /)
         n3 = (/0.0d0, -q, p /)
 
+        write(*, *) tbar_cr
         ! tbar_cr = tractions on the failure plane at damage onset
         tbar_cr_s = (tbar_cr(1)**2 + tbar_cr(2)**2)**0.5
-
+        ! compute the 2 norm of the tbar vector
+        tbar_cr_norm = (tbar_cr(1)**2 + tbar_cr(2)**2 +
+     1                 tbar_cr(3)**2.0d0)**0.5d0
+        
         ! define 6x6 rotation matrices
         R_cg = rot(alpha) ! crack to global
         R_gc = rot(-alpha) ! global to crack
@@ -754,7 +774,7 @@
         ec_cr = eTotal_cr - e0_cr
         i = 0 ! iteration counter
         diff = 1.0d8 ! initial value for while loop
-        tol = 1.0d-6 ! convergence criterion
+        tol = 1.0d-10 ! convergence criterion
         do while (diff.gt.tol)
           ! calculate first term of residual
           ! compute total stress
@@ -780,24 +800,23 @@
           lambda = (w_cr(1)**2.0d0 + mccauley(w_cr(2))**2.0d0 +
      1             w_cr(3)**2.0d0)**0.5d0
           ! compute the shear components of the displacement jump
-          w_cr_s = (w_cr(1)**2.0d0 + w_cr(2)**2.0d0)**0.5d0  
+          w_cr_s = (w_cr(1)**2.0d0 + w_cr(3)**2.0d0)**0.5d0  
           beta = w_cr_s/(w_cr_s+w_cr(2))
           ! compute Benzeggagh-Kenane parameters A and B
           A = GIIc - GIc
           B = (tbar_cr_s*beta)/(beta*(tbar_cr_s-tbar_cr(2))+tbar_cr(2))
-          ! compute the 2 norm of the tbar vector
-          tbar_cr_norm = (tbar_cr(1)**2 + tbar_cr(2)**2 +
-     1                   tbar_cr(3)**2.0d0)**0.5d0
           wmf = (2.0d0*(GIc + A*B**eta))/tbar_cr_norm
 
           ! compute the damage parameter d
           d = max(0.0d0,min((lambda/wmf),1.0d0))
 
           ! compute the tractions on the fracture plane
-          t_cr(i) = ((1.0d0-d)/d)*(w_cr(i)/wmf)*tbar_cr(i)-
-     1              kdelta(i,2)*(mccauley(-w_cr(2))/w_cr(2))*
-     2              (((1.0d0-d)/d)*(w_cr(i)/wmf)*tbar_cr(i)-
-     3              E22*(eTotal_cr(4)- ec_cr(4)))
+          do i = 1,3
+            t_cr(i) = ((1.0d0-d)/d)*(w_cr(i)/wmf)*tbar_cr(i)-
+     1                kdelta(i,2)*(mccauley(-w_cr(2))/w_cr(2))*
+     2                (((1.0d0-d)/d)*(w_cr(i)/wmf)*tbar_cr(i)-
+     3                E22*(eTotal_cr(4)- ec_cr(4)))
+          end do
 
           ! calculate the residual res 
           res = f - t_cr
@@ -808,9 +827,12 @@
           Minv = matinv3(M)
           ec_cr_delta = matmul(-Minv(1:3,1:3), res(1:3))
           ! calculate new crack strain values and determine error
-          ec_cr_new(4) = ec_cr(4) + ec_cr_delta(1)
+          ec_cr_new(1) = ec_cr(1)
           ec_cr_new(2) = ec_cr(2) + ec_cr_delta(2)
+          ec_cr_new(3) = ec_cr(3)
+          ec_cr_new(4) = ec_cr(4) + ec_cr_delta(1)
           ec_cr_new(5) = ec_cr(5) + ec_cr_delta(3)
+          ec_cr_new(6) = ec_cr(6)
           diff = maxval(abs(ec_cr_new - ec_cr))
           ! increment counter and reassign crack strain
           ec_cr = ec_cr_new
@@ -831,9 +853,9 @@
         ! see: http://fortranwiki.org/fortran/show/Matrix+inversion
         ! Performs a direct calculation of the inverse of a 3×3 matrix.
         implicit none
-        real*8, intent(in) :: A(3,3)   ! Matrix
-        real*8             :: B(3,3)   ! Inverse matrix
-        real*8             :: detinv
+        real*16, intent(in) :: A(3,3)   ! Matrix
+        real*16             :: B(3,3)   ! Inverse matrix
+        real*16             :: detinv
 
         ! Calculate the inverse determinant of the matrix
         detinv = 1.0d0/(A(1,1)*A(2,2)*A(3,3) - A(1,1)*A(2,3)*A(3,2)
@@ -897,13 +919,13 @@
         implicit none
         ! input variables
         real*8, dimension(6,6), intent(in) :: C
-        real*8, dimension(6), intent(in) :: ec_cr, eTotal_cr
-        real*8, dimension(3), intent(in) :: tbar_cr
+        real*16, dimension(6), intent(in) :: ec_cr, eTotal_cr
+        real*16, dimension(3), intent(in) :: tbar_cr
         real*8, intent(in) :: alpha, lch, eta, GIc, GIIc, E22
         ! local variables
-        real*8 :: m,n, term1, term2, term3, term4, term5, term6, term7
+        real*16 :: m,n, term1, term2, term3, term4, term5, term6, term7
         ! output variables
-        real*8, dimension(3,3) :: A
+        real*16, dimension(3,3) :: A
         ! define cosine and sine of fracture plane angle for brevity
         m = cos(alpha)
         n = sin(alpha)
