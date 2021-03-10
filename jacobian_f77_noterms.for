@@ -9,13 +9,13 @@
         implicit none
         ! input variables
         real*8, dimension(6,6), intent(in) :: C
-        real*8, dimension(6), intent(in) :: ec_cr, eTotal_cr
-        real*8, dimension(3), intent(in) :: tbar_cr
+        real*16, dimension(6), intent(in) :: ec_cr, eTotal_cr
+        real*16, dimension(3), intent(in) :: tbar_cr
         real*8, intent(in) :: alpha, lch, eta, GIc, GIIc, E22
         ! local variables
-        real*8 :: m,n, term1, term2, term3, term4, term5, term6, term7
+        real*16 :: m,n, term1, term2, term3, term4, term5, term6, term7
         ! output variables
-        real*8, dimension(3,3) :: A
+        real*16, dimension(3,3) :: A
         ! define cosine and sine of fracture plane angle for brevity
         m = cos(alpha)
         n = sin(alpha)

@@ -1,28 +1,3 @@
-      module jacobian_f77
-
-        ! no variables
-
-      contains
-      
-      function jacobian(C,ec_cr,tbar_cr,lch,alpha,eta,GIc,GIIc,
-     1                  E22,eTotal_cr) result(M)
-        implicit none
-        ! input variables
-        real*8, dimension(6,6), intent(in) :: C
-        real*16, dimension(6), intent(in) :: ec_cr, eTotal_cr
-        real*16, dimension(3), intent(in) :: tbar_cr
-        real*8, intent(in) :: alpha, lch, eta, GIc, GIIc, E22
-        ! local variables
-        real*16 :: p, q, term1, term2, term3, term4, term5, term6, term7
-        real*16 :: term8, term9, term10, part1, part12, part13, part14
-        real*16 :: part11
-        ! output variables
-        real*16, dimension(3,3) :: M
-        ! define cosine and sine of fracture plane angle for brevity
-        p = cos(alpha)
-        q = sin(alpha)
-        ! terms1-7 are repeated parts of the Jacobian matrix. They have
-        ! been defined here to reduce the length of the equations.
         term1 = (ec_cr(2)*tbar_cr(2) + (tbar_cr(1)**2.0d0 +
      1    tbar_cr(2)**2.0d0)**(0.5d0)*(4.0d0*ec_cr(4)**2.0d0 +
      2    ec_cr(2)**2.0d0)**(0.5d0))
@@ -104,11 +79,13 @@
      6    term8**2.0d0)
         M(1,3) = (64.0d0*ec_cr(4)*ec_cr(5)*lch**3.0d0*tbar_cr(1))/
      1    term10**1.5d0
-        part11 = (4.0d0*ec_cr(4)*
-     1    lch**2.0d0*term9**(0.5d0))
-        part12 = ((GIc + term3/term1**eta)*
-     2    term5**0.5d0)
-        part13 = (2.0d0*
+        M(2,1) = (2.0d0*ec_cr(2)*lch*tbar_cr(2)*((4.0d0*ec_cr(4)*
+     1    lch**2.0d0*term9**(0.5d0))/((GIc + term3/term1**eta)*
+     2    term5**0.5d0) + (ec_cr(4)*ec_cr(2)*eta*tbar_cr(2)*
+     3    term1**(1.0d0 - eta)*(tbar_cr(1)**2.0d0 +
+     4    tbar_cr(2)**2.0d0)**(0.5d0*eta - 0.5d0)*(4.0d0*
+     5    ec_cr(4)**2.0d0 + ec_cr(2)**2.0d0)**(0.5d0*eta - 1.5d0)*
+     6    (GIIc - GIc)*term9**(0.5d0)*term6**(0.5d0)*(2.0d0*
      7    ec_cr(2)**3.0d0*tbar_cr(2)**3.0d0 - (tbar_cr(1)**2.0d0 +
      8    tbar_cr(2)**2.0d0)**1.5d0*(4.0d0*ec_cr(4)**2.0d0 +
      9    ec_cr(2)**2.0d0)**1.5d0 - ec_cr(2)**2.0d0*tbar_cr(2)**2.0d0*
@@ -116,21 +93,8 @@
      2    ec_cr(4)**2.0d0 + ec_cr(2)**2.0d0)**(0.5d0) + 8.0d0*
      3    ec_cr(4)**2.0d0*ec_cr(2)*tbar_cr(2)**3.0d0 + 2.0d0*
      4    ec_cr(2)**3.0d0*tbar_cr(1)**2.0d0*tbar_cr(2) + 8.0d0*
-     5    ec_cr(4)**2.0d0*ec_cr(2)*tbar_cr(1)**2.0d0*tbar_cr(2))
-        part14 = ((GIc + term3/term1**eta)**2.0d0*term8**2.0d0)
-        part1 = (2.0d0*ec_cr(2)*lch*tbar_cr(2)*(part12/part13 +
-     2    (ec_cr(4)*ec_cr(2)*eta*tbar_cr(2)*
-     3    term1**(1.0d0 - eta)*(tbar_cr(1)**2.0d0 +
-     4    tbar_cr(2)**2.0d0)**(0.5d0*eta - 0.5d0)*(4.0d0*
-     5    ec_cr(4)**2.0d0 + ec_cr(2)**2.0d0)**(0.5d0*eta - 1.5d0)*
-     6    (GIIc - GIc)*term9**(0.5d0)*term6**(0.5d0)*part13)/
-     6    part14))
-        write(*,*) part11
-        write(*,*) part12
-        write(*,*) part13
-        write(*,*) part14
-        write(*,*) part1
-        M(2,1) = part1/
+     5    ec_cr(4)**2.0d0*ec_cr(2)*tbar_cr(1)**2.0d0*tbar_cr(2)))/
+     6    ((GIc + term3/term1**eta)**2.0d0*term8**2.0d0)))/
      7    term5**0.5d0 - ((0.5d0*abs(ec_cr(2)*lch) - 0.5d0*ec_cr(2)*
      8    lch)*((2.0d0*ec_cr(2)*lch*tbar_cr(2)*((4.0d0*ec_cr(4)*
      9    lch**2.0d0*term9**(0.5d0))/((GIc + term3/term1**eta)*
@@ -276,6 +240,3 @@
      6    ec_cr(2)**2.0d0)**(0.5d0*eta))/term1**eta - (GIc*
      7    (tbar_cr(1)**2.0d0 + tbar_cr(2)**2.0d0)**(0.5d0*eta)*(4.0d0*
      8    ec_cr(4)**2.0d0 + ec_cr(2)**2.0d0)**(0.5d0*eta))/term1**eta)
-      end function jacobian
-
-      end module jacobian_f77
