@@ -1,0 +1,27 @@
+1	strain1
+2	strain2
+3	strain3
+4	strain4
+5	strain5
+6	strain6
+7	FI_LT (failure index longitudinal tension)
+8	FI_LC (failure index longitudinal compression)
+9	longitudinal fail flag
+10	lch_fib (fiber failure characteristic length)
+11	matrix failure flag
+12	lch_mat (matrix failure chracteristic length)
+13	a_fail (angle of failure plane)
+14	epsR_0 (equivalent strain at matrix failure onset)
+15	tR_0 (equivalent traction at matrix failure onset)
+16	Gamma (mixed mode critical strain energy release rate)
+17	g0 (volumetric strain energy at matrix failure onset)
+18	epsR_f (equivalent strain at ultimate failure)
+19	dMat (scalar matrix damage variable)
+20	d1State (11 direction scalar damage variable)
+21	d2State (22 direction scalar damage variable)
+22	d3State (33 direction scalar damage variable)
+23	d4State (12 direction scalar damage variable)
+24	d5State (23 direction scalar damage variable)
+25	d6State (13 direction scalar damage variable)
+26	minDamage
+27	deletion flag
