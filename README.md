@@ -25,16 +25,16 @@ The model requires the following material properties to be defined in the simula
 **X<sub>C</sub>** = compressive strength fiber direction   
 **Y<sub>T</sub><sup>is</sup>** =  in-situ tensile strength transverse direction  
 **Y<sub>C</sub><sup>is</sup>** = in-situ compressive strength transverse direction  
-**S<sub>L</sub><sup>is</sup>** = in-situ longitudinal shear strength
+**S<sub>L</sub><sup>is</sup>** = in-situ longitudinal shear strength  
 **η<sub>L</sub>** = shear friction coefficient longitudinal direction  
-**α<sub>0</sub>** = failure plane angle pure transverse compression
+**α<sub>0</sub>** = failure plane angle pure transverse compression  
 **G<sub>1+</sub>** =  tensile fracture toughness fiber direction  
 **G<sub>1-</sub>** =  compressive fracture toughness fiber direction  
 **G<sub>2+</sub>** = tensile fracture toughness transverse direction  
 **G<sub>6</sub>** = shear fracture toughness  
 
 ## List of Fortran source code
-- **composite_cdm.for** : Implementation of CDM model in fixed format Fortran 77 (compatible with all Abaqus installations)
+- **composite_cdm.for** : Implementation of CDM model in fixed format Fortran 77 (compatible with all Abaqus installations)  
 
 ## List of Verification Models  
 - **Tension_11** : Pure tension in fiber direction  
@@ -72,15 +72,12 @@ United Kingdom
 >Mechanics of Materials 39 (2007) 909–919  
 >http://dx.doi.org/10.1016/j.mechmat.2007.03.006  
 
->[4] W. Tan, B. G. Falzon, L. N. S. Chiu, and M. Price
->Predicting low velocity impact damage and
->Compression-After-Impact (CAI) behaviour of composite
->laminates
->Composites Part A 71 (2015) 212–226.
->http://doi.org/10.1016/j.compositesa.2015.01.025
+>[4] W. Tan, B. G. Falzon, L. N. S. Chiu, and M. Price  
+>Predicting low velocity impact damage and Compression-After-Impact (CAI) behaviour of composite laminates  
+>Composites Part A 71 (2015) 212–226.  
+>http://doi.org/10.1016/j.compositesa.2015.01.025  
 
->[5] B. G. Falzon, H. Liu, and W. Tan
->Comment on ‘A tensorial based progressive damage model for
->fibre reinforced polymers’
->Composite Structures 176 (2017) 877–882.
+>[5] B. G. Falzon, H. Liu, and W. Tan  
+>Comment on ‘A tensorial based progressive damage model for fibre reinforced polymers’  
+>Composite Structures 176 (2017) 877–882.  
 >http://doi.org/10.1016/j.compstruct.2017.06.011
