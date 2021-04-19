@@ -72,15 +72,13 @@ United Kingdom
 >Mechanics of Materials 39 (2007) 909–919  
 >http://dx.doi.org/10.1016/j.mechmat.2007.03.006  
 
->[4] W. Tan, B. G. Falzon, L. N. S. Chiu, and M. Price
->Predicting low velocity impact damage and
->Compression-After-Impact (CAI) behaviour of composite
->laminates
->Composites Part A 71 (2015) 212–226.
->http://doi.org/10.1016/j.compositesa.2015.01.025
+>[4] W. Tan, B. G. Falzon, L. N. S. Chiu, and M. Price  
+>Predicting low velocity impact damage and  
+>Compression-After-Impact (CAI) behaviour of composite laminates  
+>Composites Part A 71 (2015) 212–226.  
+>http://doi.org/10.1016/j.compositesa.2015.01.025  
 
->[5] B. G. Falzon, H. Liu, and W. Tan
->Comment on ‘A tensorial based progressive damage model for
->fibre reinforced polymers’
->Composite Structures 176 (2017) 877–882.
+>[5] B. G. Falzon, H. Liu, and W. Tan  
+>Comment on ‘A tensorial based progressive damage model for fibre reinforced polymers’  
+>Composite Structures 176 (2017) 877–882.  
 >http://doi.org/10.1016/j.compstruct.2017.06.011
