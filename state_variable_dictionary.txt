@@ -23,5 +23,4 @@
 23	d4State (12 direction scalar damage variable)
 24	d5State (23 direction scalar damage variable)
 25	d6State (13 direction scalar damage variable)
-26	minDamage
-27	deletion flag
+26	deletion flag
