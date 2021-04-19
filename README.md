@@ -73,8 +73,7 @@ United Kingdom
 >http://dx.doi.org/10.1016/j.mechmat.2007.03.006  
 
 >[4] W. Tan, B. G. Falzon, L. N. S. Chiu, and M. Price  
->Predicting low velocity impact damage and  
->Compression-After-Impact (CAI) behaviour of composite laminates  
+>Predicting low velocity impact damage and Compression-After-Impact (CAI) behaviour of composite laminates  
 >Composites Part A 71 (2015) 212–226.  
 >http://doi.org/10.1016/j.compositesa.2015.01.025  
 
