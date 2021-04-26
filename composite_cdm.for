@@ -200,9 +200,9 @@
           end do
         else
           
-          ! do while (debugLoop.ne.999)
-          !   debugLoop = 1
-          ! end do
+        !   do while (debugLoop.ne.999)
+        !     debugLoop = 1
+        !   end do
 
           ! If not initial step, calc. stresses according to CDM model
           do k = 1,nblock
@@ -500,10 +500,10 @@
         ! Degrade Poisson ratios (Eq. 3 [4])
         nu12_d = nu12*(1.0d0 - d1State)
         nu13_d = nu13*(1.0d0 - d1State)
-        nu21_d = nu21*(1.0d0 - dMat)
-        nu23_d = nu23*(1.0d0 - dMat)
-        nu31_d = nu31*(1.0d0 - dMat)
-        nu32_d = nu32*(1.0d0 - dMat)
+        nu21_d = nu21*(1.0d0 - dMatState)
+        nu23_d = nu23*(1.0d0 - dMatState)
+        nu31_d = nu31*(1.0d0 - dMatState)
+        nu32_d = nu32*(1.0d0 - dMatState)
 
         ! Calculate degraded Poisson ratio stiffness matrix
         psi = (1.0d0 - nu12_d*nu21_d - nu23_d*nu32_d - nu31_d*nu13_d -
@@ -567,17 +567,16 @@
         d6StateOld = stateOld(k,25)
         ! Ensure state retention
         d2State = max(d2,d2StateOld)
-        d3State = max(d2,d3StateOld)
-        d4State = max(d2,d4StateOld)
-        d5State = max(d2,d5StateOld)
-        d6State = max(d2,d6StateOld)
+        d3State = max(d3,d3StateOld)
+        d4State = max(d4,d4StateOld)
+        d5State = max(d5,d5StateOld)
+        d6State = max(d6,d6StateOld)
         ! Set as state variables
         stateNew(k,21) = d2State
         stateNew(k,22) = d3State
         stateNew(k,23) = d4State
         stateNew(k,24) = d5State
         stateNew(k,25) = d6State
-        
         ! Check damage state of each element. If element is damaged
         ! completely in each direction it is flagged for deletion
         maxShear = min(strain(4)*2.0d0,strain(5)*2.0d0,strain(6)*2.0d0)
@@ -649,7 +648,10 @@
         else
           delta_0 = X/E
           delta_c = (2.0d0*G)/(X*lch)
-          if (delta_c < delta_0) call xplb_exit ! lch < lch_min
+          if (delta_c < delta_0) then 
+            print *, 'Max element size error: ', X, E, G, lch
+            call xplb_exit ! lch < lch_min
+          end if 
           dam = (delta_c*(abs(tStrain)-delta_0))/
      1          (abs(tStrain)*(delta_c-delta_0)) 
           if (dam < 0.0d0) then
