@@ -489,13 +489,13 @@
         end if
   
         ! Record fiber direction damage state
-        d1StateOld = stateOld(1,20)
+        d1StateOld = stateOld(k,20)
         d1State = min(0.999d0,max(d1,d1StateOld))
-        stateNew(1,20) = d1State
+        stateNew(k,20) = d1State
         ! Record matrix damage state
-        dMatStateOld = stateOld(1,19)
+        dMatStateOld = stateOld(k,19)
         dMatState = min(0.999d0,max(dMat,dMatStateOld))
-        stateNew(1,19) = dMatState
+        stateNew(k,19) = dMatState
 
         ! Degrade Poisson ratios (Eq. 3 [4])
         nu12_d = nu12*(1.0d0 - d1State)
