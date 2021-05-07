@@ -26,6 +26,7 @@ The model requires the following material properties to be defined in the simula
 **Y<sub>T</sub><sup>is</sup>** =  in-situ tensile strength transverse direction  
 **Y<sub>C</sub><sup>is</sup>** = in-situ compressive strength transverse direction  
 **S<sub>L</sub><sup>is</sup>** = in-situ longitudinal shear strength  
+**S<sub>T</sub><sup>is</sup>** = in-situ transverse shear strength  
 **η<sub>L</sub>** = shear friction coefficient longitudinal direction  
 **α<sub>0</sub>** = failure plane angle pure transverse compression  
 **G<sub>1+</sub>** =  tensile fracture toughness fiber direction  

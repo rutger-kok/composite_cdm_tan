@@ -220,7 +220,7 @@
             call cdm(k,nblock,nstatev,strain,stateOld,C,e11,e22,e33,
      1               charlength(k),nu12,nu13,nu23,g12,g13,g23,XT,XPO,XC,
      2               YT,YC,SL,ST,GL1Plus,GE1Plus,G1Minus,G2Plus,G6,etaL,
-     3               stress,stateNew)
+     3               defGradNew,stress,stateNew)
 
             ! Assign stresses from cdm subroutine to stressNew array
             do i = 1,6
@@ -245,8 +245,8 @@
 
       subroutine cdm(k,nblock,nstatev,strain,stateOld,C,e11,e22,e33,lch,
      1               nu12,nu13,nu23,g12,g13,g23,XT,XPO,XC,YT,YC,SL,ST,
-     2               GL1Plus,GE1Plus,G1Minus,G2Plus,G6,etaL,stress,
-     3               stateNew)
+     2               GL1Plus,GE1Plus,G1Minus,G2Plus,G6,etaL,defGradNew,
+     3               stress,stateNew)
         ! Purpose: Implements continuum damage mechanics framework
         !   from Maimi et al. (2007) for longitudinal tensile damage and
         !   from Tan et al. (2015) for transverse and longitudinal
@@ -302,6 +302,7 @@
         ! input variables
         integer, intent(in) :: nblock,nstatev,k
         real*8, dimension(nblock,nstatev), intent(in) :: stateOld
+        real*8, dimension(nblock,9), intent(in) :: defGradNew ! hardcoded dimensions assume 3D
         real*8, dimension(6,6), intent(inout) :: C
         real*8, dimension(6), intent(in) :: strain
         real*8, intent(in) :: e11,e22,e33,nu12,nu13,nu23,g12,g13,g23
@@ -318,7 +319,7 @@
         real*8 dMat,dMatState,dMatStateOld
         real*8 r1Plus,rE1Plus,rF1Plus,rL1Plus,K1,A1Plus,psi,maxShear
         real*8 nu21,nu31,nu32,nu12_d,nu21_d,nu13_d,nu31_d,nu23_d,nu32_d
-        real*8 etaT,kappa,lambda,a_fail,lch_fib,lch_mat,epsR_f
+        real*8 etaT,kappa,lambda,a_fail,lch_fib,lch_mat,epsR_f,F
         real*8 Gamma,g0,tR_0,epsR_0,tN_0,tL_0,tT_0,epsT_0,epsN_0,epsL_0
         real*8 FI_LT,FI_LC,FI_M,FI_LT_old,FI_LC_old,FI_LT_max,FI_LC_max
         integer i
@@ -326,7 +327,7 @@
         real*8, dimension(6), intent(inout) :: stress
         real*8, dimension(nblock,nstatev), intent(inout) :: stateNew
         ! external functions
-        real*8, external :: linear_damage,mccauley
+        real*8, external :: linear_damage,mccauley,det_3x3
 
         ! Recalculate additional Poisson's ratio terms
         nu21 = nu12*(e22/e11) ! Poisson's ratio 21
@@ -461,6 +462,12 @@
      1              G6*(tL_0/tR_0)**2.0d0 +
      2              G2Plus*(tN_0/tR_0)**2.0d0
             ! calculate mixed mode ultimate failure strain (Eq. 22 [4])
+            if (((Gamma/lch) - g0) <= 0.0d0) then
+              print *, 'Characteristic element length too large'
+              print *, a_fail, tR_0, Gamma, g0, epsR_0
+              print *, trialStress
+              call xplb_exit
+            end if
             epsR_f = (2.0d0/tR_0)*((Gamma/lch)-g0) + epsR_0
             ! Record variables at onset
             stateNew(k,14) = epsR_0
@@ -577,11 +584,16 @@
         stateNew(k,23) = d4State
         stateNew(k,24) = d5State
         stateNew(k,25) = d6State
-        ! Check damage state of each element. If element is damaged
-        ! completely in each direction it is flagged for deletion
-        maxShear = min(strain(4)*2.0d0,strain(5)*2.0d0,strain(6)*2.0d0)
-        if ((d1State > 0.99d0).and.(maxShear > 1.0d0)) then
-          stateNew(k,26) = 0.0d0  ! flag element for deletion
+        ! Element deletion criteria
+        maxShear = max(abs(strain(4)*2.0d0),
+     1                 abs(strain(5)*2.0d0),
+     2                 abs(strain(6)*2.0d0))
+        ! calculate the determinant of the defomartion gradient
+        F = det_3x3(defGradNew)
+        stateNew(k,26) = F
+        if (((F <= 0.1).and.(F >= 5.0)).and.(d1State > 0.99d0)
+     1      .and.(maxShear >= 1.0)) then
+          stateNew(k,27) = 0.0d0  ! flag element for deletion
         end if
       end subroutine cdm
 
@@ -795,3 +807,17 @@
         R(6,4) = n
         R(6,6) = m
       end subroutine rot_matrix
+
+      function det_3x3(A) result(det)
+        ! Purpose: Compute the determinant of a 3x3 matrix (input as a
+        !   9 element vector)
+        ! Variable Dictionary:
+        ! A = input matrix (9x1)
+        ! det = determinant of A
+        implicit none
+        real*8, dimension(9), intent(in)  :: A
+        real*8 det
+        det = A(1)*(A(2)*A(3) - A(5)*A(8)) -
+     1        A(4)*(A(7)*A(3) - A(5)*A(6)) +
+     2        A(9)*(A(7)*A(8) - A(2)*A(6))
+      end function det_3x3
