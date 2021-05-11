@@ -200,9 +200,9 @@
           end do
         else
           
-        !   do while (debugLoop.ne.999)
-        !     debugLoop = 1
-        !   end do
+          do while (debugLoop.ne.999)
+            debugLoop = 1
+          end do
 
           ! If not initial step, calc. stresses according to CDM model
           do k = 1,nblock
