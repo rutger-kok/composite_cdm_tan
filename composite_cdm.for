@@ -591,8 +591,7 @@
         ! calculate the determinant of the defomartion gradient
         F = det_3x3(defGradNew)
         stateNew(k,26) = F
-        if (((F <= 0.1).and.(F >= 5.0)).and.(d1State > 0.99d0)
-     1      .and.(maxShear >= 1.0)) then
+        if (((F <= 0.8).and.(F >= 1.2)).or.(d1State > 0.99d0)) then
           stateNew(k,27) = 0.0d0  ! flag element for deletion
         end if
       end subroutine cdm
