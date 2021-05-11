@@ -591,14 +591,14 @@
         ! calculate the determinant of the defomartion gradient
         F = det_3x3(defGradNew)
         stateNew(k,26) = F
-        if (((F <= 0.8).and.(F >= 1.2)).or.(d1State > 0.99d0)) then
+        if (((F < 0.8).and.(F > 1.6)).or.(d1State > 0.99d0)) then
           stateNew(k,27) = 0.0d0  ! flag element for deletion
         end if
       end subroutine cdm
 
       subroutine matrix_damage(strain,aR,epsR_0,epsR_f,dM)
         ! Purpose: Calculate matrix damage evolution according to
-        ! the methodlogy proposed in Tan et al. [xxx]
+        ! the methodlogy proposed in Tan et al. [4]
         ! Variable dictionary
         ! strain = global strain vector
         ! epsR_0 = equivalent strain at damage onset
@@ -680,7 +680,7 @@
         real*8, intent(in) :: value
         real*8 :: mccauley
         mccauley = (value+abs(value))/2.0d0
-        end function mccauley
+      end function mccauley
         
       subroutine fail_initiation(trialStress,ST,SL,etaL,etaT,lambda,
      1                           kappa,FI,a_fail)
@@ -723,55 +723,55 @@
 
       subroutine catalanotti(trialStress,ST,SL,etaL,etaT,lambda,kappa,
      1                       aR,trialFI)
-           ! Purpose: Failure criteria from Catalanotti et al. (2013)
-           ! Variable Dictionary:
-           ! trialStress = stress calculated using the undamaged
-           !   stiffness tensor.
-           ! trialStress_crack = trialStress in crack coordinate system
-           ! etaT = friction coefficient in the transverse direction
-           ! etaL = friction coefficient in the longitudinal direction
-           ! kappa = parameter used to calculate failure indices
-           ! lambda = parameter used to calculate failure indices
-           ! ST = in-situ transverse shear strength
-           ! SL = in-situ longitudinal shear strength
-           ! trialFI_MT = stores trial values of tensile failure index
-           ! trialFI_MC = stores trial values of compression failure index
-           ! trialFI = max of tensile and compressive failure indices
-           ! tN, tT, tL = tractions on failure plane
-           ! aR = angle in radians
-           ! R_GC = transformation matrix from global to crack (failure
-           !   plane) coordinate system
-           implicit none
-           ! input variables
-           real*8, dimension(6), intent(in) :: trialStress
-           real*8, intent(in) :: ST,SL,etaL,etaT,lambda,kappa,aR
-           ! local variables
-           real*8 :: tN,tT,tL,trialFI_MT,trialFI_MC
-           real*8, dimension(6,6) :: R_GC
-           real*8, dimension(6) :: trialStress_crack
-           ! output variables
-           real*8, intent(out) :: trialFI
-           call rot_matrix(aR, R_GC)
-           ! rotate stresses to crack coordinate frame
-           trialStress_crack = matmul(R_GC(1:6,1:6), trialStress(1:6))
-           ! define tractions
-           tN = trialStress_crack(2)
-           tT = trialStress_crack(5)
-           tL = trialStress_crack(4)
-           ! Calculate value of failure indices at current angle
-           if (tN >= 0.0d0) then
-             trialFI_MT = (tN/ST)**2.0d0 + (tL/SL)**2.0d0 +
+        ! Purpose: Failure criteria from Catalanotti et al. (2013)
+        ! Variable Dictionary:
+        ! trialStress = stress calculated using the undamaged
+        !   stiffness tensor.
+        ! trialStress_crack = trialStress in crack coordinate system
+        ! etaT = friction coefficient in the transverse direction
+        ! etaL = friction coefficient in the longitudinal direction
+        ! kappa = parameter used to calculate failure indices
+        ! lambda = parameter used to calculate failure indices
+        ! ST = in-situ transverse shear strength
+        ! SL = in-situ longitudinal shear strength
+        ! trialFI_MT = stores trial values of tensile failure index
+        ! trialFI_MC = stores trial values of compression failure index
+        ! trialFI = max of tensile and compressive failure indices
+        ! tN, tT, tL = tractions on failure plane
+        ! aR = angle in radians
+        ! R_GC = transformation matrix from global to crack (failure
+        !   plane) coordinate system
+        implicit none
+        ! input variables
+        real*8, dimension(6), intent(in) :: trialStress
+        real*8, intent(in) :: ST,SL,etaL,etaT,lambda,kappa,aR
+        ! local variables
+        real*8 :: tN,tT,tL,trialFI_MT,trialFI_MC
+        real*8, dimension(6,6) :: R_GC
+        real*8, dimension(6) :: trialStress_crack
+        ! output variables
+        real*8, intent(out) :: trialFI
+        call rot_matrix(aR, R_GC)
+        ! rotate stresses to crack coordinate frame
+        trialStress_crack = matmul(R_GC(1:6,1:6), trialStress(1:6))
+        ! define tractions
+        tN = trialStress_crack(2)
+        tT = trialStress_crack(5)
+        tL = trialStress_crack(4)
+        ! Calculate value of failure indices at current angle
+        if (tN >= 0.0d0) then
+          trialFI_MT = (tN/ST)**2.0d0 + (tL/SL)**2.0d0 +
      1                 (tT/ST)**2.0d0 + lambda*(tN/ST)*(tL/SL)**2.0d0 +
      2                 kappa*(tN/ST) ! Eq. 42 [1]
-             trialFI_MC = 0.0d0
-           else
-             trialFI_MC = (tL/(SL-etaL*tN))**2.0d0 +
+          trialFI_MC = 0.0d0
+        else
+          trialFI_MC = (tL/(SL-etaL*tN))**2.0d0 +
      1                 (tT/(ST-etaT*tN))**2.0d0 ! Eq. 5 [1]
-             trialFI_MT = 0.0d0
-           end if
-           ! Return the maximum trial failure index
-           trialFI = max(trialFI_MT,trialFI_MC)
-        end subroutine catalanotti
+          trialFI_MT = 0.0d0
+        end if
+        ! Return the maximum trial failure index
+        trialFI = max(trialFI_MT,trialFI_MC)
+      end subroutine catalanotti
 
       subroutine rot_matrix(angle, R)
         ! Purpose: defines transformation matrix to rotate from failure
