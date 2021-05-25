@@ -316,10 +316,8 @@
         real*8, dimension(6) :: strain_0_crack,stress_0_crack
         real*8, dimension(6) :: stress_crack
         real*8 dE1Plus,dL1Plus,dF1Plus,d1Plus,d1Minus,d1,d2,d3,d4,d5,d6
-        real*8 d1State,d1StateOld,d2State,d2StateOld,d3State,d3StateOld
-        real*8 d4State,d4StateOld,d5State,d5StateOld,d6State,d6StateOld
-        real*8 dMat,dMatState,dMatStateOld
-        real*8 r1Plus,rE1Plus,rF1Plus,rL1Plus,K1,A1Plus,psi,maxShear
+        real*8 d1State,d1StateOld,dMat,dMatState,dMatStateOld,psi
+        real*8 r1Plus,rE1Plus,rF1Plus,rL1Plus,K1,A1Plus,r1Minus,A1Minus
         real*8 nu21,nu31,nu32,nu12_d,nu21_d,nu13_d,nu31_d,nu23_d,nu32_d
         real*8 etaT,kappa,lambda,a_fail,lch_fib,lch_mat,epsR_f,F
         real*8 Gamma,g0,tR_0,epsR_0,tN_0,tL_0,tT_0,epsT_0,epsN_0,epsL_0
@@ -354,10 +352,10 @@
         FI_LC = 0.0d0
 
         ! Calculate longitudinal tensile failure indices
-        if (trialStress(1) > 0.d0) then
+        if (trialStress(1) >= 0.d0) then
           FI_LT = strain(1)/(XT/e11) ! Eq. 54 [1]
         else if (trialStress(1) < 0.d0) then
-          FI_LC = (strain(1)/(XC/e11))**2.0d0 ! Eq. 6 [4]
+          FI_LC = abs(strain(1))/(XC/e11) ! Eq. 6 [4]
         end if
 
         ! Longitudinal tensile damage
@@ -398,19 +396,21 @@
         end if
 
         ! Longitudinal compressive damage
-        if (FI_LC >= 1.0d0) then
+        if (FI_LC_max >= 1.0d0) then
           ! Check if damage has already initiated
           if (stateOld(k,9) == 0.0d0) then
             stateNew(k,9) = 1.0d0 ! longitudinal failure flag
             stateNew(k,10) = lch ! record char. length at onset
-            d1Minus = linear_damage(XC,e11,G1Minus,strain(1),lch) ! Eq. 8 [4]
           else
             lch_fib = stateOld(k,10) ! load char. length
-            d1Minus = linear_damage(XC,e11,G1Minus,strain(1),lch_fib) ! Eq. 8 [4]
             do i = 9,10 ! ensure state variables are retained
               stateNew(k,i) = stateOld(k,i)
             end do
           end if
+          r1Minus = FI_LC_max
+          A1Minus = (2.0d0*lch_fib*XC**2.0d0)/
+     1              (2.0d0*e11*G1Minus - lch_fib*XC**2.0d0)
+          d1Minus = 1.0d0 - (1.0d0/r1Minus)*exp(A1Minus*(1.0d0-r1Minus))
         else
           d1Minus = 0.0d0
         end if
@@ -466,7 +466,7 @@
             ! calculate mixed mode ultimate failure strain (Eq. 22 [4])
             if (((Gamma/lch) - g0) <= 0.0d0) then
               print *, 'Characteristic element length too large'
-              print *, a_fail, tR_0, Gamma, g0, epsR_0
+              print *, a_fail, tR_0, Gamma, g0, epsR_0, lch
               print *, trialStress
               call xplb_exit
             end if
@@ -568,28 +568,13 @@
         d4 = 1.0d0 - abs(stress(4)/trialStress(4)) ! damage global 12
         d5 = 1.0d0 - abs(stress(5)/trialStress(5)) ! damage global 23
         d6 = 1.0d0 - abs(stress(6)/trialStress(6)) ! damage global 13
-        ! Load old global damage variables
-        d2StateOld = stateOld(k,21)
-        d3StateOld = stateOld(k,22)
-        d4StateOld = stateOld(k,23)
-        d5StateOld = stateOld(k,24)
-        d6StateOld = stateOld(k,25)
-        ! Ensure state retention
-        d2State = max(d2,d2StateOld)
-        d3State = max(d3,d3StateOld)
-        d4State = max(d4,d4StateOld)
-        d5State = max(d5,d5StateOld)
-        d6State = max(d6,d6StateOld)
         ! Set as state variables
-        stateNew(k,21) = d2State
-        stateNew(k,22) = d3State
-        stateNew(k,23) = d4State
-        stateNew(k,24) = d5State
-        stateNew(k,25) = d6State
+        stateNew(k,21) = d2
+        stateNew(k,22) = d3
+        stateNew(k,23) = d4
+        stateNew(k,24) = d5
+        stateNew(k,25) = d6
         ! Element deletion criteria
-        maxShear = max(abs(strain(4)*2.0d0),
-     1                 abs(strain(5)*2.0d0),
-     2                 abs(strain(6)*2.0d0))
         ! calculate the determinant of the defomartion gradient
         F = det_3x3(defGradNew)
         stateNew(k,26) = F
@@ -636,52 +621,20 @@
         ! calculate damage variable
         d = (epsR_f*(epsR-epsR_0))/(epsR*(epsR_f-epsR_0)) ! Eq. 19 [4]
         dM = max(0.0d0,d)
-        end subroutine matrix_damage
+      end subroutine matrix_damage
 
-      function linear_damage(X,E,G,tStrain,lch) result(dam)
-        ! Purpose: Implement linear damage dissipation
-        ! Variable dictionary:
-        ! X = failure stress (material direction unspecified)
-        ! E = modulus
-        ! G = energy release rate (NOT shear modulus)
-        ! tStrain = scalar trial strain value
-        ! lch = characteristic element length
-        ! delta_0 = strain at yield
-        ! delta_c = strain at final failure
-        ! dam = scalar damage variable
-        implicit none
-        ! input variables
-        real*8, intent(in) :: X,E,G,tStrain,lch
-        ! local variables
-        real*8 delta_0, delta_c,dam
-
-        ! Calculate scalar damage variable
-        if (tStrain == 0.0d0) then ! no strain = no damage
-          dam = 0.0d0 
-        else
-          delta_0 = X/E
-          delta_c = (2.0d0*G)/(X*lch)
-          if (delta_c < delta_0) then 
-            print *, 'Max element size error: ', X, E, G, lch
-            call xplb_exit ! lch < lch_min
-          end if 
-          dam = (delta_c*(abs(tStrain)-delta_0))/
-     1          (abs(tStrain)*(delta_c-delta_0)) 
-          if (dam < 0.0d0) then
-              dam = 0.0d0
-          end if
-        end if
-        dam = min(0.999,dam)
-      end function linear_damage
-
-      pure function mccauley(value)
+      pure function mccauley(val)
         ! Purpose: implements the McCauley operator
         ! Variable dictionary:
-        ! value = variable to execute mccauley brackets operation on
+        ! val = variable to execute mccauley brackets operation on
         implicit none
-        real*8, intent(in) :: value
+        real*8, intent(in) :: val
         real*8 :: mccauley
-        mccauley = (value+abs(value))/2.0d0
+        if (val >= 0.0d0) then
+            mccauley = val
+        else
+            mccauley = 0.0d0
+        end if
       end function mccauley
         
       subroutine fail_initiation(trialStress,ST,SL,etaL,etaT,lambda,
