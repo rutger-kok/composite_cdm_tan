@@ -19,6 +19,7 @@ from abaqus import *
 from abaqusConstants import *
 from caeModules import *
 from visualization import *
+import time
 import csv
 import numpy as np
 import shutil
@@ -80,7 +81,7 @@ def post_process(input_file):
     # first obtain fracture energy from material properties
     # indices of fracture energies
     energy_table = {'tension_11': [18, 19], 'tension_22': 21,
-                    'compression_11': 20,  # 'compression_22': None,
+                    'compression_11': 20, 'compression_22': None,
                     'shear_12': 22, 'shear_23': 22}
     mat_props = odb.materials['VTC401'].userMaterial.mechanicalConstants
     if isinstance(energy_table[input_file], list):
@@ -97,7 +98,7 @@ def post_process(input_file):
 
     # check failure stresses
     strength_table = {'tension_11': 9, 'tension_22': 12, 'compression_11': 11,
-                      'compression_22': 13, 'shear_12': 14, 'shear_23': 14}
+                      'compression_22': 13, 'shear_12': 14, 'shear_23': 15}
     strength = mat_props[strength_table[input_file]]
     max_stress = max([abs(x) for x in stress_data])
     data = [input_file, fracture_energy, dissipated_energy, strength,
@@ -127,9 +128,10 @@ def plot_data(input_file, data):
 def main():
     # create verification directory
     cwd = os.getcwd()
-    wd = 'C:\\Workspace\\verification'
+    wd = 'C:\\Workspace\\verification_' + str(int(time.time()))
     if not os.path.exists(wd):
         os.makedirs(wd)
+
     # copy input files to verification directory
     for f in os.listdir(cwd):
         if f.endswith(".inp"):
@@ -138,7 +140,7 @@ def main():
 
     all_data = []
     for job in ('tension_11', 'tension_22',
-                'compression_11',  # 'compression_22',        
+                'compression_11', 'compression_22',
                 'shear_12', 'shear_23'):
         run_job(job)
         test_data = post_process(job)

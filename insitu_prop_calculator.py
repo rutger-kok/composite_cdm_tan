@@ -47,16 +47,29 @@ from catalanotti import fail_initiation
 from scipy.optimize import fsolve
 
 # Material Properties IM7-8552
-XT = 2.3235  # tensile strength fiber direction
-XC = 1.2001  # compressive strength fiber direction
-beta = 2.98e-8  # shear response factor
-g12 = 5290  # shear modulus (in MPa)
-t = 0.131  # cured ply thickness (in mm)
-GIc = 0.2774  # mode I fracture toughness (in kJ/m2)
-GIIc = 0.7879  # mode II fracture toughness (in kJ/m2)
-E11 = 171420  # longitudinal modulus (MPa)
-E22 = 9080  # transverse modulus (MPa)
-nu_21 = 0.32 * (E22 / E11)  # Poisson's ratio 21-direction
+# XT = 2.3235  # tensile strength fiber direction
+# XC = 1.2001  # compressive strength fiber direction
+# beta = 2.98e-8  # shear response factor
+# g12 = 5290  # shear modulus (in MPa)
+# t = 0.131  # cured ply thickness (in mm)
+# GIc = 0.2774  # mode I fracture toughness (in kJ/m2)
+# GIIc = 0.7879  # mode II fracture toughness (in kJ/m2)
+# E11 = 171420  # longitudinal modulus (MPa)
+# E22 = 9080  # transverse modulus (MPa)
+# nu_21 = 0.32 * (E22 / E11)  # Poisson's ratio 21-direction
+# alpha0 = np.radians(53.0)
+
+# Material Properties SHD Composites VTC401
+XT = 2.180  # tensile strength fiber direction
+XC = 0.812  # compressive strength fiber direction
+beta = 4.72e-8  # shear response factor
+g12 = 3267  # shear modulus (in MPa)
+t = 0.205  # cured ply thickness (in mm)
+GIc = 0.380  # mode I fracture toughness (in kJ/m2)
+GIIc = 1.62  # mode II fracture toughness (in kJ/m2)
+E11 = 116600  # longitudinal modulus (MPa)
+E22 = 7231  # transverse modulus (MPa)
+nu_21 = 0.339 * (E22 / E11)  # Poisson's ratio 21-direction
 alpha0 = np.radians(53.0)
 
 # Calculate in-situ properties
