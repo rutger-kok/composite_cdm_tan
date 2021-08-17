@@ -122,7 +122,7 @@
         real*8 :: e11,e22,e33,nu12,nu13,nu23,g12,g13,g23
         real*8 :: nu21,nu31,nu32,psi
         real*8 :: GL1Plus,GE1Plus,G1Minus,G2Plus,G6
-        real*8 :: XT,XPO,XC,YT,YC,SL,ST,alpha0,stressPower,etaL,lch
+        real*8 :: XT,XPO,XC,YT,YC,SL,ST,alpha0,stressPower,etaL,lch,t
         integer :: k,i,debugLoop
 
         ! Elastic constants orthotropic ply
@@ -180,7 +180,7 @@
         C(6,6) = g13
 
         ! Initial elastic step, for Abaqus tests 
-        if (stepTime == 0) then        
+        if (stepTime == 0) then
           do k = 1, nblock
             ! Initialize state variables
             do i = 1,nstatev
@@ -199,8 +199,9 @@
 
           end do
         else
-          
-        !   do while (debugLoop.ne.999)
+        ! enabled only for debugging in Visual Studio
+        !   t = stepTime - dt
+        !   do while ((debugLoop.ne.999).and.(t == 0.0d0))
         !     debugLoop = 1
         !   end do
 
@@ -243,6 +244,7 @@
 
           end do
         end if
+        close(95)
       end subroutine vumat
 
       subroutine cdm(k,nblock,nstatev,strain,stateOld,C,e11,e22,e33,lch,
@@ -286,7 +288,6 @@
         ! etaT = friction coefficient in the transverse direction
         ! kappa = parameter used to calculate failure indices
         ! lambda = parameter used to calculate failure indices
-        ! maxShear = element deletion measure from [4]
         ! R_GC,R_CG = transformation matrices (global to crack CSYS and
         !   crack to global CSYS)
         ! nuXY_d (X,Y = 1,2,3) = degraded Poisson's ratios
@@ -296,7 +297,6 @@
         ! epsN_0,epsT_0,epsL_0 = strains on fail plane at damage onset
         ! tR_0 (equivalent traction at matrix failure onset)
         ! Gamma (mixed mode critical strain energy release rate)
-        ! g0 (volumetric strain energy at matrix failure onset)
         ! epsR_f (equivalent strain at ultimate failure)
         ! Variables containing 'Old' are state variables from the
         !   previous iteration
@@ -421,8 +421,8 @@
      1         d1Minus*(mccauley(-trialStress(1))/abs(trialStress(1)))
         else
           d1 = 0.0d0
-        end if  
-
+        end if
+  
         ! Matrix damage
         FI_M = 0.0d0 ! initialize variables
 
@@ -455,22 +455,18 @@
             ! Calculate equivalent stress at onset (Eq. 16 [4])
             tR_0 = (tT_0**2.0d0 + mccauley(tN_0)**2.0d0 +
      1             tL_0**2.0d0)**0.5d0
-            ! Calculate volumetric strain energies at onset (Eq. 23 [4])
-            g0 = (tL_0*epsL_0*0.5d0)*(tL_0/tR_0)**2.0d0 +
-     1           (tT_0*epsT_0*0.5d0)*(tT_0/tR_0)**2.0d0 +
-     2           (tN_0*epsN_0*0.5d0)*(mccauley(tN_0)/tR_0)**2.0d0
             ! Calculate mixed-mode critical strain energy release rate (Eq. 25 [4])
             Gamma = G6*(tT_0/tR_0)**2.0d0 +
      1              G6*(tL_0/tR_0)**2.0d0 +
-     2              G2Plus*(tN_0/tR_0)**2.0d0
+     2              G2Plus*(mccauley(tN_0)/tR_0)**2.0d0
             ! calculate mixed mode ultimate failure strain (Eq. 22 [4])
-            if (((Gamma/lch) - g0) <= 0.0d0) then
+            epsR_f = (2.0d0 * Gamma) / (tR_0 * lch)
+            if (epsR_f <= epsR_0) then
               print *, 'Characteristic element length too large'
               print *, a_fail, tR_0, Gamma, g0, epsR_0, lch
               print *, trialStress
               call xplb_exit
             end if
-            epsR_f = (2.0d0/tR_0)*((Gamma/lch)-g0) + epsR_0
             ! Record variables at onset
             stateNew(k,14) = epsR_0
             stateNew(k,15) = tR_0
@@ -499,11 +495,11 @@
   
         ! Record fiber direction damage state
         d1StateOld = stateOld(k,20)
-        d1State = min(0.999d0,max(d1,d1StateOld))
+        d1State = min(0.9d0,max(d1,d1StateOld))
         stateNew(k,20) = d1State
         ! Record matrix damage state
         dMatStateOld = stateOld(k,19)
-        dMatState = min(0.999d0,max(dMat,dMatStateOld))
+        dMatState = min(0.9d0,max(dMat,dMatStateOld))
         stateNew(k,19) = dMatState
 
         ! Degrade Poisson ratios (Eq. 3 [4])
@@ -555,14 +551,14 @@
         D(4,4) = 1.0d0 - dMatState
         D(5,5) = 1.0d0 - dMatState
         D(6,6) = 1.0d0
-     
+
         ! Calculate degraded stresses using damage matrix (Eq. 1 [4])
         stress_crack = matmul(D, stress_np_crack)
 
         ! transform back to material coordinate system
         stress = matmul(R_CG, stress_crack)
         
-        ! define global scalar damage variables (for tracking only)
+        ! define global scalar damage variables (for tracking ONLY)
         d2 = 1.0d0 - abs(stress(2)/trialStress(2)) ! damage global 2
         d3 = 1.0d0 - abs(stress(3)/trialStress(3)) ! damage global 3
         d4 = 1.0d0 - abs(stress(4)/trialStress(4)) ! damage global 12
@@ -576,9 +572,12 @@
         stateNew(k,25) = d6
         ! Element deletion criteria
         ! calculate the determinant of the defomartion gradient
-        F = det_3x3(defGradNew)
+        F = det_3x3(defGradNew(k,:))
         stateNew(k,26) = F
-        if (((F < 0.8).and.(F > 1.6)).or.(d1State > 0.99d0)) then
+        if (((F > 0.0d0).and.(F < 0.5d0)).or.
+     1      (F >= 2.5d0).or.
+     2      (d1State >= 0.9d0).or.
+     3      (min(strain(1), strain(2)) <= -1.0d0)) then
           stateNew(k,27) = 0.0d0  ! flag element for deletion
         end if
       end subroutine cdm
@@ -605,6 +604,7 @@
         real*8, dimension(6,6) :: R_GC
         real*8, dimension(6) :: strain_crack
         real*8 epsN,epsT,epsL,epsR,d
+        integer ios
         ! output variables
         real*8, intent(out) :: dM
         ! external functions

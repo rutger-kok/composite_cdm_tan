@@ -55,8 +55,8 @@ def post_process(input_file):
     # get direction of loading from input file name
     _, loading_direction = input_file.split('_')
     # table linking loading directions to their corresponding stress and strain
-    # indices in an Abaqus ODB
-    ss_indices = {'11': 0, '22': 1, '33': 2, '12': 3, '23': 4, '13': 5}
+    # indices in an Abaqus ODB (NOTE: indices are different from VUMAT!)
+    ss_indices = {'11': 0, '22': 1, '33': 2, '12': 3, '13': 4, '23': 5}
     ss_index = ss_indices[loading_direction]
 
     # extract stress-strain data (NOTE: currently single element only)
