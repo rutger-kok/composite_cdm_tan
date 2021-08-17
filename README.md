@@ -1,4 +1,4 @@
-NOTE: This CDM routine is working for single element models (i.e. it passes single element verification tests), but is highly unstable for multi-element models. If you spot a bug or any other inconsistency let me know (contact details below).
+__NOTE: This CDM routine is working for single element models (i.e. it passes single element verification tests), but is highly unstable for multi-element models. If you spot a bug or any other inconsistency let me know (contact details below).__
 
 # 3D Continuum Damage Mechanics VUMAT for Composite Materials
 Explicit material subroutine (VUMAT) implementing a continuum damage mechanics (CDM) model for composite materials in Abaqus (in fixed format Fortran 77).
